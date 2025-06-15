@@ -1,0 +1,4 @@
+- sample-audio-1.mp3 (AC_Grayling_BBC_Radio4_Desert_Island_Discs_10_Aug_2008_b00cx1ds.flac):
+  https://commons.wikimedia.org/wiki/Category:BBC_voice_samples_of_males
+- sample-image-1.jpg
+  https://gina.marcel-kloubert.de

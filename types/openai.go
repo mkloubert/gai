@@ -84,6 +84,8 @@ type OpenAIChatMessageContentImageItem struct {
 	Type string `json:"type,omitempty"`
 }
 
+// OpenAIChatMessageContentImageItemUrl stores information of the image URL in
+// an `OpenAIChatMessageContentImageItem` object.
 type OpenAIChatMessageContentImageItemUrl struct {
 	// Detail stores detail level of the image.
 	Detail string `json:"image_url,omitempty"`
@@ -97,4 +99,21 @@ type OpenAIChatMessageContentTextItem struct {
 	Text string `json:"text,omitempty"`
 	// Type stores the value `text`.
 	Type string `json:"type,omitempty"`
+}
+
+// OpenAIChatMessageContentAudioItem represents an `OpenAIChatMessageContentItem` of type `audio_input`.
+type OpenAIChatMessageContentAudioItem struct {
+	// InputAudio stores the data of the audio.
+	InputAudio OpenAIChatMessageContentAudioItemInput `json:"input_audio,omitempty"`
+	// Type stores the value `audio_input`.
+	Type string `json:"type,omitempty"`
+}
+
+// OpenAIChatMessageContentAudioItemInput stores information of the image URL in
+// an `OpenAIChatMessageContentAudioItem` object.
+type OpenAIChatMessageContentAudioItemInput struct {
+	// Data stores the data in Base64 format.
+	Data string `json:"data,omitempty"`
+	// Format stores the value `mp3` or `wav`.
+	Format string `json:"format,omitempty"`
 }

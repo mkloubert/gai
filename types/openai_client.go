@@ -26,6 +26,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -60,6 +61,43 @@ func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, it
 						Url: content.Content,
 					},
 					Type: "image_url",
+				}
+			} else if content.Type == "audio" {
+				parts := strings.SplitN(content.Content, ",", 2)
+				if len(parts) != 2 {
+					return messages, errors.New("invalid data URI")
+				}
+
+				meta := strings.TrimPrefix(parts[0], "data:")
+				data := parts[1]
+
+				// MIME-Typ extrahieren
+				mimeParts := strings.SplitN(meta, ";", 2)
+				if len(mimeParts) < 1 {
+					return messages, fmt.Errorf("no MIME type found")
+				}
+
+				format := ""
+
+				mime := strings.TrimSpace(
+					strings.ToLower(mimeParts[0]),
+				)
+				if strings.HasSuffix(mime, "mp3") || strings.HasSuffix(mime, "mpeg") {
+					format = "mp3"
+				} else if strings.HasSuffix(mime, "wav") {
+					format = "wav"
+				}
+
+				if format == "" {
+					return messages, fmt.Errorf("unsupported audio format '%v'", mime)
+				}
+
+				newItem = &OpenAIChatMessageContentAudioItem{
+					InputAudio: OpenAIChatMessageContentAudioItemInput{
+						Data:   data,
+						Format: format,
+					},
+					Type: "input_audio",
 				}
 			}
 
@@ -97,6 +135,17 @@ func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationIte
 					Type:    "image",
 				}
 				item.Contents = append(item.Contents, newUserImageItem)
+			} else if strings.HasPrefix(mimeType, "audio/") {
+				dataURI, err := c.AsSupportedAudioFormatString(data)
+				if err != nil {
+					return err
+				}
+
+				newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+					Content: dataURI,
+					Type:    "audio",
+				}
+				item.Contents = append(item.Contents, newUserImageItem)
 			} else {
 				return fmt.Errorf("mime type '%v' not supported", mimeType)
 			}
@@ -104,6 +153,19 @@ func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationIte
 	}
 
 	return nil
+}
+
+// AsSupportedAudioFormatString reads data as audio and tries to convert
+// it to a supported data format as data URI.
+func (c *OpenAIClient) AsSupportedAudioFormatString(b []byte) (string, error) {
+	mimeType := http.DetectContentType(b)
+	encoded := base64.StdEncoding.EncodeToString(b)
+	dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+
+	if strings.HasPrefix(mimeType, "audio/") {
+		return dataURI, nil
+	}
+	return dataURI, fmt.Errorf("mime type '%v' is not a supported audio format", mimeType)
 }
 
 // AsSupportedImageFormatString reads data as image and tries to convert
@@ -168,7 +230,10 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	// add files
 	for _, o := range opts {
-		c.appendFilesTo(userMessage, o.Files)
+		err := c.appendFilesTo(userMessage, o.Files)
+		if err != nil {
+			return "", conversation, err
+		}
 	}
 
 	messages := []OpenAIChatMessage{}
@@ -324,7 +389,10 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 
 	// add files
 	for _, o := range opts {
-		c.appendFilesTo(userMessage, o.Files)
+		err := c.appendFilesTo(userMessage, o.Files)
+		if err != nil {
+			return promptResponse, err
+		}
 	}
 
 	messages := []OpenAIChatMessage{}

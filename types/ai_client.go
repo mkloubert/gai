@@ -26,6 +26,9 @@ import "io"
 
 // AIClient describes a client for an AI provider.
 type AIClient interface {
+	// AsSupportedAudioFormatString reads data as audio and tries to convert
+	// it to a supported data format as data URI.
+	AsSupportedAudioFormatString(b []byte) (string, error)
 	// AsSupportedImageFormatString reads data as image and tries to convert
 	// it to a supported data format as data URI.
 	AsSupportedImageFormatString(b []byte) (string, error)

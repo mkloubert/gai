@@ -94,6 +94,14 @@ func (c *OllamaClient) appendFilesTo(item *ConversationRepositoryConversationIte
 	return nil
 }
 
+// AsSupportedAudioFormatString reads data as audio and tries to convert
+// it to a supported data format as data URI.
+func (c *OllamaClient) AsSupportedAudioFormatString(b []byte) (string, error) {
+	mimeType := http.DetectContentType(b)
+
+	return "", fmt.Errorf("mime type '%v' is not a supported audio format", mimeType)
+}
+
 // AsSupportedImageFormatString reads data as image and tries to convert
 // it to a supported data format as data URI.
 func (c *OllamaClient) AsSupportedImageFormatString(b []byte) (string, error) {
@@ -292,7 +300,10 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 
 	// add files
 	for _, o := range opts {
-		c.appendFilesTo(userMessage, o.Files)
+		err := c.appendFilesTo(userMessage, o.Files)
+		if err != nil {
+			return promptResponse, err
+		}
 	}
 
 	messages := []OllamaAIChatMessage{}
