@@ -62,21 +62,47 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 
 	url := fmt.Sprintf("%v/api/chat", baseUrl)
 
-	userMessage := OllamaAIChatMessage{
-		Content: msg,
-		Role:    "user",
+	userMessage := &ConversationRepositoryConversationItem{
+		Contents: make(ConversationRepositoryConversationItemContents, 0),
+		Model:    model,
+		Role:     "user",
 	}
+	newUserItem := &ConversationRepositoryConversationItemContentItem{
+		Content: msg,
+		Type:    "text",
+	}
+	userMessage.Contents = append(userMessage.Contents, newUserItem)
 
 	messages := []OllamaAIChatMessage{}
+	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
+		if item.Contents != nil {
+			for _, content := range item.Contents {
+				var newMessage *OllamaAIChatMessage
+
+				if content.Type == "text" {
+					newMessage = &OllamaAIChatMessage{
+						Content: content.Content,
+						Role:    item.Role,
+					}
+				}
+
+				if newMessage != nil {
+					messages = append(messages, *newMessage)
+				} else {
+					return fmt.Errorf("content type '%v' not allowed", content.Type)
+				}
+			}
+		}
+
+		return nil
+	}
+
 	// add previuos conversation
 	for _, item := range conversation {
-		messages = append(messages, OllamaAIChatMessage{
-			Content: item.Content,
-			Role:    item.Role,
-		})
+		appendConversationItem(item)
 	}
 	// add user message
-	messages = append(messages, userMessage)
+	appendConversationItem(userMessage)
 
 	body := map[string]interface{}{
 		"model":    c.chatModel,
@@ -92,6 +118,8 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, err
 	}
 
+	userMessage.Time = app.GetISOTime()
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonData)))
 	if err != nil {
 		return "", conversation, err
@@ -106,6 +134,8 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, err
 	}
 	defer resp.Body.Close()
+
+	responseTime := app.GetISOTime()
 
 	if resp.StatusCode != 200 {
 		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
@@ -123,21 +153,25 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, err
 	}
 
-	assistantMessage := OpenAIChatMessage{
-		Content: chatResponse.Message.Content,
-		Role:    "assistant",
+	answer := chatResponse.Message.Content
+
+	// update conversation
+	{
+		conversation = append(conversation, userMessage)
+
+		// take assistant message
+		assistantMessage := &ConversationRepositoryConversationItem{
+			Contents: make(ConversationRepositoryConversationItemContents, 0),
+			Model:    chatResponse.Model,
+			Role:     "assistant",
+			Time:     responseTime,
+		}
+		assistantMessage.Contents = append(assistantMessage.Contents, &ConversationRepositoryConversationItemContentItem{
+			Content: answer,
+			Type:    "text",
+		})
+		conversation = append(conversation, assistantMessage)
 	}
-
-	answer := assistantMessage.Content
-
-	conversation = append(conversation, &ConversationRepositoryConversationItem{
-		Role:    "user",
-		Content: userMessage.Content,
-	})
-	conversation = append(conversation, &ConversationRepositoryConversationItem{
-		Role:    "assistant",
-		Content: answer,
-	})
 
 	ctx.UpdateConversationWith(conversation)
 

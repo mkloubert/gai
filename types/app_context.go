@@ -28,6 +28,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -131,6 +132,16 @@ func (app *AppContext) GetCurrentContext() string {
 	}
 
 	return strings.TrimSpace(app.Getenv("GAI_CONTEXT"))
+}
+
+// GetISOTime() returns current timestamp in UTC ISO 8601 format.
+func (app *AppContext) GetISOTime() string {
+	return app.GetNow().Format("2006-01-02T15:04:05.000Z")
+}
+
+// GetNow() returns current timestamp in UTC format.
+func (app *AppContext) GetNow() time.Time {
+	return time.Now().UTC()
 }
 
 // Run runs the application.

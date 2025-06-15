@@ -80,9 +80,9 @@ func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversation
 
 // GetConversation returns conversation for the current directory.
 func (ctx *ChatContext) GetConversation() (ConversationRepositoryConversation, error) {
-	conversatioNContext := ctx.ensureConversation()
+	conversationContext := ctx.ensureConversation()
 
-	return conversatioNContext.Conversation, nil
+	return conversationContext.Conversation, nil
 }
 
 func (ctx *ChatContext) getConversaionsFilePath() (string, error) {

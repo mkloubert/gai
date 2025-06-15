@@ -65,7 +65,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&app.WorkingDirectory, "cwd", "", "", "current working directory")
 	rootCmd.PersistentFlags().StringVarP(&app.EOL, "eol", "", fmt.Sprintln(), "custom EOL char sequence")
 	rootCmd.PersistentFlags().StringArrayVarP(&app.EnvFiles, "env-file", "e", []string{}, "one or more env file to load")
-	rootCmd.PersistentFlags().StringVarP(&app.HomeDirectory, "home", "h", "", "user's home directory")
+	rootCmd.PersistentFlags().StringVarP(&app.HomeDirectory, "home", "", "", "user's home directory")
 	rootCmd.PersistentFlags().BoolVarP(&app.SkipDefaultEnvFiles, "skip-env-files", "", false, "do not load default .env files")
 	rootCmd.PersistentFlags().Int64VarP(&app.MaxTokens, "max-tokens", "", 0, "maximum number of tokens")
 	rootCmd.PersistentFlags().StringVarP(&app.Model, "model", "m", "", "default chat model")

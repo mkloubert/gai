@@ -65,7 +65,21 @@ type OpenAIChatCompletionResponseV1Usage struct {
 // OpenAIChatMessage stores data of an OpenAI client chat message.
 type OpenAIChatMessage struct {
 	// Content stores the message content.
-	Content string `json:"content,omitempty"`
+	Content OpenAIChatMessageContent `json:"content,omitempty"`
 	// Role stores the role.
 	Role string `json:"role,omitempty"`
+}
+
+// OpenAIChatMessageContent stores list of `OpenAIChatMessageContentItem`s.
+type OpenAIChatMessageContent = []OpenAIChatMessageContentItem
+
+// OpenAIChatMessageContentItem is an item inside an `OpenAIChatMessageContent`.
+type OpenAIChatMessageContentItem = interface{}
+
+// OpenAIChatMessageContentTextItem represents an `OpenAIChatMessageContentItem` of type `text`.
+type OpenAIChatMessageContentTextItem struct {
+	// Text stores the message content.
+	Text string `json:"text,omitempty"`
+	// Type stores the value `text`.
+	Type string `json:"type,omitempty"`
 }

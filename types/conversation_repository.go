@@ -35,9 +35,24 @@ type ConversationRepositoryConversation = []*ConversationRepositoryConversationI
 // ConversationRepositoryConversationItem is an item in a `ConversationRepositoryConversation`.
 type ConversationRepositoryConversationItem struct {
 	// Content stores the usually Markdown content of the item.
-	Content string `yaml:"content"`
+	Contents ConversationRepositoryConversationItemContents `yaml:"contents"`
+	// Model stores the model that is/has been used.
+	Model string `yaml:"model"`
 	// Role stores the role like `assistant`, `system` or `user`
 	Role string `yaml:"role"`
+	// Time stores timestamp in ISO 8601 format.
+	Time string `yaml:"time"`
+}
+
+// ConversationRepositoryConversationItemContents stores list of `ConversationRepositoryConversationItemContentItem`s.
+type ConversationRepositoryConversationItemContents = []*ConversationRepositoryConversationItemContentItem
+
+// ConversationRepositoryConversationItemContentItem is an item inside a `ConversationRepositoryConversationItemContentItem`.
+type ConversationRepositoryConversationItemContentItem struct {
+	// Content stores the string serialized content.
+	Content string `yaml:"content"`
+	// Type stores the type like `text` or `image`.
+	Type string `yaml:"type"`
 }
 
 // ConversationRepositoryConversationContext stores a conversation in a specific context.

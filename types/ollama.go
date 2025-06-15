@@ -35,4 +35,6 @@ type OllamaAIChatMessage struct {
 type OllamaApiChatCompletionResponse struct {
 	// Message stores the message.
 	Message OllamaAIChatMessage `json:"message,omitempty"`
+	// Model stores the model that has been used.
+	Model string `json:"model,omitempty"`
 }

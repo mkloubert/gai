@@ -73,21 +73,57 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 
 	url := fmt.Sprintf("%v/v1/chat/completions", baseUrl)
 
-	userMessage := OpenAIChatMessage{
-		Content: msg,
-		Role:    "user",
+	userMessage := &ConversationRepositoryConversationItem{
+		Contents: make(ConversationRepositoryConversationItemContents, 0),
+		Model:    model,
+		Role:     "user",
 	}
+	newUserItem := &ConversationRepositoryConversationItemContentItem{
+		Content: msg,
+		Type:    "text",
+	}
+	userMessage.Contents = append(userMessage.Contents, newUserItem)
 
 	messages := []OpenAIChatMessage{}
-	// add previuos conversation
+	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
+		if item.Contents != nil {
+			for _, content := range item.Contents {
+				var newMessage *OpenAIChatMessage
+
+				if content.Type == "text" {
+					newMessage = &OpenAIChatMessage{
+						Content: make(OpenAIChatMessageContent, 0),
+						Role:    item.Role,
+					}
+
+					newItem := &OpenAIChatMessageContentTextItem{
+						Text: content.Content,
+						Type: "text",
+					}
+
+					newMessage.Content = append(newMessage.Content, newItem)
+				}
+
+				if newMessage != nil {
+					messages = append(messages, *newMessage)
+				} else {
+					return fmt.Errorf("content type '%v' not allowed", content.Type)
+				}
+			}
+		}
+
+		return nil
+	}
+
+	// add previous conversation
 	for _, item := range conversation {
-		messages = append(messages, OpenAIChatMessage{
-			Content: item.Content,
-			Role:    item.Role,
-		})
+		err := appendConversationItem(item)
+		if err != nil {
+			return "", conversation, err
+		}
 	}
 	// add user message
-	messages = append(messages, userMessage)
+	appendConversationItem(userMessage)
 
 	body := map[string]interface{}{
 		"model":                 model,
@@ -101,6 +137,8 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 	if err != nil {
 		return "", conversation, err
 	}
+
+	userMessage.Time = app.GetISOTime()
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonData)))
 	if err != nil {
@@ -122,6 +160,8 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
 	}
 
+	responseTime := app.GetISOTime()
+
 	// load the response
 	responseData, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -134,24 +174,28 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, err
 	}
 
-	assistantMessage := OpenAIChatMessage{
-		Content: "",
-		Role:    "assistant",
-	}
+	answer := ""
 	if len(chatResponse.Choices) > 0 {
-		assistantMessage.Content = chatResponse.Choices[0].Message.Content
+		answer = chatResponse.Choices[0].Message.Content
 	}
 
-	answer := assistantMessage.Content
+	// update conversation
+	{
+		conversation = append(conversation, userMessage)
 
-	conversation = append(conversation, &ConversationRepositoryConversationItem{
-		Role:    "user",
-		Content: userMessage.Content,
-	})
-	conversation = append(conversation, &ConversationRepositoryConversationItem{
-		Role:    "assistant",
-		Content: answer,
-	})
+		// take assistant message
+		assistantMessage := &ConversationRepositoryConversationItem{
+			Contents: make(ConversationRepositoryConversationItemContents, 0),
+			Model:    chatResponse.Model,
+			Role:     "assistant",
+			Time:     responseTime,
+		}
+		assistantMessage.Contents = append(assistantMessage.Contents, &ConversationRepositoryConversationItemContentItem{
+			Content: answer,
+			Type:    "text",
+		})
+		conversation = append(conversation, assistantMessage)
+	}
 
 	ctx.UpdateConversationWith(conversation)
 

@@ -68,14 +68,16 @@ func init_list_conversation_Command(app *types.AppContext, parentCmd *cobra.Comm
 
 			chroma := app.GetChromaSettings()
 
-			for i, c := range conversation {
+			for i, item := range conversation {
 				if i > 0 {
 					app.Writeln()
 				}
 
-				app.Writeln(fmt.Sprintf("%v:", c.Role))
-				chroma.HighlightMarkdown(c.Content)
-				app.Writeln()
+				app.Writeln(fmt.Sprintf("%v:", item.Role))
+				for _, content := range item.Contents {
+					chroma.HighlightMarkdown(content.Content)
+					app.Writeln()
+				}
 			}
 		},
 	}
