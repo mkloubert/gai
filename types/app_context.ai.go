@@ -22,14 +22,43 @@
 
 package types
 
-// AIClient describes a client for an AI provider.
-type AIClient interface {
-	// Chat starts or continues a chat conversation with message in `msg` based on `ctx` and returns the new conversation.
-	Chat(ctx *ChatContext, msg string) (string, ConversationRepositoryConversation, error)
-	// ChatModel returns the current chat model.
-	ChatModel() string
-	// Provider returns the name of the provider.
-	Provider() string
-	// SetChatModel sets the current chat model.
-	SetChatModel(m string) error
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+const initalOllamaChatModel = "llama3.1:8b"
+const initalOpenAIChatModel = "gpt-4.1-mini"
+
+// NewAIClient creates a new `AIClient` instance for a `provider`.
+func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
+	provider = strings.TrimSpace(
+		strings.ToLower(provider),
+	)
+
+	if provider == "ollama" {
+		ollama := &OllamaClient{}
+		ollama.chatModel = initalOllamaChatModel
+
+		return ollama, nil
+	}
+
+	if provider == "openai" {
+		apiKey := strings.TrimSpace(app.ApiKey)
+		if apiKey == "" {
+			apiKey = strings.TrimSpace(app.Getenv("OPENAI_API_KEY"))
+		}
+		if apiKey == "" {
+			return nil, errors.New("no API defined")
+		}
+
+		openai := &OpenAIClient{}
+		openai.chatModel = initalOpenAIChatModel
+		openai.apiKey = apiKey
+
+		return openai, nil
+	}
+
+	return nil, fmt.Errorf("'%v' is an unknown AI provider", provider)
 }

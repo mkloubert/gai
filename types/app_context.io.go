@@ -22,16 +22,59 @@
 
 package types
 
-import "fmt"
+import (
+	"fmt"
+	"runtime"
+	"strings"
+)
+
+func (app *AppContext) getBestChromaFormatterName() string {
+	GAI_TERMINAL_FORMATTER := app.Getenv("GAI_TERMINAL_FORMATTER")
+	if GAI_TERMINAL_FORMATTER != "" {
+		return GAI_TERMINAL_FORMATTER
+	}
+
+	switch os := runtime.GOOS; os {
+	case "darwin", "linux":
+		return "terminal16m"
+	case "windows":
+		return "terminal256"
+	}
+
+	return "terminal"
+}
+
+func (app *AppContext) getBestChromaStyleName() string {
+	GAI_TERMINAL_STYLE := app.Getenv("GAI_TERMINAL_STYLE")
+	if GAI_TERMINAL_STYLE != "" {
+		return GAI_TERMINAL_STYLE
+	}
+
+	return "dracula"
+}
+
+// GetChromaSettings returns an instance of `ChromaSettings`.
+func (app *AppContext) GetChromaSettings() *ChromaSettings {
+	return &ChromaSettings{
+		App:       app,
+		Formatter: app.getBestChromaFormatterName(),
+		Style:     app.getBestChromaStyleName(),
+	}
+}
 
 // Write writes `b` to `Stdout`.
 func (app *AppContext) Write(b []byte) (n int, err error) {
 	return app.Stdout.Write(b)
 }
 
-// Writeln writes `s` to `Stdout` and adds `EOL`.
-func (app *AppContext) Writeln(s string) (n int, err error) {
-	return app.WriteString(fmt.Sprintf("%v%v", s, app.EOL))
+// Writeln writes `s` separated by space to `Stdout` and adds `EOL`.
+func (app *AppContext) Writeln(vals ...any) (n int, err error) {
+	s := make([]string, 0)
+	for _, v := range vals {
+		s = append(s, fmt.Sprintf("%v", v))
+	}
+
+	return app.WriteString(fmt.Sprintf("%v%v", strings.Join(s, " "), app.EOL))
 }
 
 // WriteError writes `b` to `Stderr`.

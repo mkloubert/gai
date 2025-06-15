@@ -35,6 +35,8 @@ import (
 type AppContext struct {
 	// AI is the default AI client.
 	AI AIClient
+	// ApiKey stores a global API key.
+	ApiKey string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
 	EnvFiles []string
 	// EnvFiles stores environment variables.

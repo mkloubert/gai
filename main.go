@@ -59,6 +59,7 @@ func main() {
 	}
 
 	// use these flags and options everywhere
+	rootCmd.PersistentFlags().StringVarP(&app.ApiKey, "api-key", "", "", "global API key to use")
 	rootCmd.PersistentFlags().StringVarP(&app.WorkingDirectory, "cwd", "", "", "current working directory")
 	rootCmd.PersistentFlags().StringVarP(&app.EOL, "eol", "", fmt.Sprintln(), "custom EOL char sequence")
 	rootCmd.PersistentFlags().StringArrayVarP(&app.EnvFiles, "env-file", "", []string{}, "one or more env file to load")
@@ -67,7 +68,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&app.Model, "model", "", "", "default chat model")
 	rootCmd.PersistentFlags().BoolVarP(&app.Verbose, "verbose", "", false, "verbose output")
 
-	commands.Init_ask_Command(app, rootCmd)
+	commands.Init_chat_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
 
 	app.Log = log.New(app, "", log.Ldate|log.Ltime)

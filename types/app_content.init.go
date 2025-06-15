@@ -69,7 +69,7 @@ func (app *AppContext) initAI() {
 		app.CheckIfError(fmt.Errorf("no chat model defined, use provider:model format"))
 	}
 
-	client, err := NewAIClient(provider)
+	client, err := app.NewAIClient(provider)
 	app.CheckIfError(err)
 
 	app.Dbg(fmt.Sprintf("Using '%v' provider with '%v' model as default ...", provider, model))

@@ -30,12 +30,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Init_ask_Command initializes the `ask` command.
-func Init_ask_Command(app *types.AppContext, parentCmd *cobra.Command) {
-	var askCmd = &cobra.Command{
-		Use:     "ask [QUESTION]",
-		Aliases: []string{"a"},
-		Short:   "Ask question",
+// Init_chat_Command initializes the `chat` command.
+func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var reset bool
+
+	var chatCmd = &cobra.Command{
+		Use:     "chat [QUESTION]",
+		Aliases: []string{"c"},
+		Short:   "AI chat",
 		Long:    `Asks the AI a question.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			message := strings.TrimSpace(
@@ -48,14 +50,23 @@ func Init_ask_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			chat, err := app.NewChatContext()
 			app.CheckIfError(err)
 
-			answer, err := app.AI.Chat(chat, message)
+			if reset {
+				chat.ResetConversation()
+			}
+
+			answer, _, err := app.AI.Chat(chat, message)
 			app.CheckIfError(err)
 
 			app.Writeln(answer)
+
+			err = chat.UpdateConversation()
+			app.CheckIfError(err)
 		},
 	}
 
+	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
+
 	parentCmd.AddCommand(
-		askCmd,
+		chatCmd,
 	)
 }

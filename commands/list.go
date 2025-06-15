@@ -53,12 +53,44 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func init_list_conversation_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var listConversationCmd = &cobra.Command{
+		Use:     "conversation",
+		Aliases: []string{"c"},
+		Short:   "List conversation",
+		Long:    `List conversation of current context.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			chat, err := app.NewChatContext()
+			app.CheckIfError(err)
+
+			conversation, err := chat.GetConversation()
+			app.CheckIfError(err)
+
+			chroma := app.GetChromaSettings()
+
+			for i, c := range conversation {
+				if i > 0 {
+					app.Writeln()
+				}
+
+				app.Writeln(fmt.Sprintf("%v:", c.Role))
+				chroma.HighlightMarkdown(c.Content)
+				app.Writeln()
+			}
+		},
+	}
+
+	parentCmd.AddCommand(
+		listConversationCmd,
+	)
+}
+
 func init_list_env_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	var noSort bool
 
 	var listEnvCmd = &cobra.Command{
 		Use:     "env",
-		Aliases: []string{"a"},
+		Aliases: []string{"e"},
 		Short:   "List env vars",
 		Long:    `Lists all environment variables for the app in an ordered list.`,
 		Run: func(cmd *cobra.Command, args []string) {
@@ -101,6 +133,7 @@ func Init_list_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		},
 	}
 
+	init_list_conversation_Command(app, listCmd)
 	init_list_env_Command(app, listCmd)
 
 	parentCmd.AddCommand(

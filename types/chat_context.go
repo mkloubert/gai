@@ -38,7 +38,18 @@ type ChatContext struct {
 	Conversations *ConversationRepository
 }
 
-// GetConversation returns all conversations for the current directory.
+func (ctx *ChatContext) ensureConversations() *ConversationRepository {
+	repo := ctx.Conversations
+	if repo == nil {
+		repo = &ConversationRepository{}
+
+		ctx.Conversations = repo
+	}
+
+	return repo
+}
+
+// GetConversation returns conversation for the current directory.
 func (ctx *ChatContext) GetConversation() (ConversationRepositoryConversation, error) {
 	app := ctx.App
 
@@ -104,8 +115,26 @@ func (ctx *ChatContext) ReloadAllConversations() error {
 	return nil
 }
 
-// UpdateAllConversations updates the conversation file with all conversations.
-func (ctx *ChatContext) UpdateConversation(conversation ConversationRepositoryConversation) error {
+// ResetConversation resets conversation of the current directory.
+func (ctx *ChatContext) ResetConversation() error {
+	app := ctx.App
+
+	app.Dbg(fmt.Sprintf("Resetting conversation of %v ...", app.WorkingDirectory))
+
+	if ctx.Conversations == nil {
+		ctx.Conversations = &ConversationRepository{}
+	}
+	if ctx.Conversations.Conversations == nil {
+		ctx.Conversations.Conversations = map[string]ConversationRepositoryConversation{}
+	}
+
+	ctx.Conversations.Conversations[app.WorkingDirectory] = make(ConversationRepositoryConversation, 0)
+
+	return nil
+}
+
+// UpdateConversation updates the conversation file with all conversations.
+func (ctx *ChatContext) UpdateConversation() error {
 	conversationFile, err := ctx.getConversaionsFilePath()
 	if err != nil {
 		return err
@@ -114,22 +143,9 @@ func (ctx *ChatContext) UpdateConversation(conversation ConversationRepositoryCo
 	app := ctx.App
 
 	app.Dbg(fmt.Sprintf("Will write conversations to '%v' ...", conversationFile))
-
-	repo := ctx.Conversations
-	if repo == nil {
-		repo = &ConversationRepository{}
-	}
-	if repo.Conversations == nil {
-		repo.Conversations = map[string]ConversationRepositoryConversation{}
-	}
-
-	if conversation != nil {
-		repo.Conversations[app.WorkingDirectory] = conversation
-	} else {
-		repo.Conversations[app.WorkingDirectory] = make(ConversationRepositoryConversation, 0)
-	}
-
 	app.Dbg("Creating YAML data ...")
+
+	repo := ctx.ensureConversations()
 
 	data, err := yaml.Marshal(&repo)
 	if err != nil {
@@ -142,8 +158,23 @@ func (ctx *ChatContext) UpdateConversation(conversation ConversationRepositoryCo
 	if err != nil {
 		return err
 	}
-
-	ctx.Conversations = repo
-
 	return nil
+}
+
+// UpdateConversationWith updates the conversation file with all conversations.
+func (ctx *ChatContext) UpdateConversationWith(conversation ConversationRepositoryConversation) error {
+	app := ctx.App
+
+	repo := ctx.ensureConversations()
+	if repo.Conversations == nil {
+		repo.Conversations = map[string]ConversationRepositoryConversation{}
+	}
+
+	if conversation != nil {
+		repo.Conversations[app.WorkingDirectory] = conversation
+	} else {
+		repo.Conversations[app.WorkingDirectory] = make(ConversationRepositoryConversation, 0)
+	}
+
+	return ctx.UpdateConversation()
 }

@@ -22,14 +22,17 @@
 
 package types
 
-// AIClient describes a client for an AI provider.
-type AIClient interface {
-	// Chat starts or continues a chat conversation with message in `msg` based on `ctx` and returns the new conversation.
-	Chat(ctx *ChatContext, msg string) (string, ConversationRepositoryConversation, error)
-	// ChatModel returns the current chat model.
-	ChatModel() string
-	// Provider returns the name of the provider.
-	Provider() string
-	// SetChatModel sets the current chat model.
-	SetChatModel(m string) error
+// OllamaAIChatMessage is an item inside
+// OllamaAIChat.Conversation array
+type OllamaAIChatMessage struct {
+	// Content stores the message content.
+	Content string `json:"content,omitempty"`
+	// Role stores the role.
+	Role string `json:"role,omitempty"`
+}
+
+// OllamaApiResponse is the data of a successful chat conversation response
+type OllamaApiChatCompletionResponse struct {
+	// Message stores the message.
+	Message OllamaAIChatMessage `json:"message,omitempty"`
 }
