@@ -1,4 +1,4 @@
-# gai
+# gAI
 
 > A command line tool for AI based tasks written in [Go](https://go.dev).
 

@@ -24,19 +24,41 @@ package types
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 
-	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 )
 
 // AppContext handles data and logic for running application.
 type AppContext struct {
+	// AI is the default AI client.
+	AI AIClient
+	// EnvFiles stores list of additional .env files that should be loaded in this direction.
+	EnvFiles []string
+	// EnvFiles stores environment variables.
+	EnvVars map[string]string
+	// EnvFiles stores string representing new line.
+	EOL string
+	// HomeDirectory is the absolute path to the user's home directory.
+	HomeDirectory string
+	// Log is the logger the app should use.
+	Log *log.Logger
+	// Model is the default chat model to use.
+	Model string
 	// RootCommand stores the root command.
 	RootCommand *cobra.Command
+	// SkipDefaultEnvFiles indicates not to use default .env files, if `true`.
+	SkipDefaultEnvFiles bool
 	// Stderr stores the stream for error outputs.
 	Stderr *os.File
+	// Stdin stores the stream for default inputs.
+	Stdin *os.File
+	// Stdout stores the stream for default outputs.
+	Stdout *os.File
+	// Verbose indicates if application should also output debug messages.
+	Verbose bool
 	// WorkingDirectory stores the current root directory.
 	WorkingDirectory string
 }
@@ -49,19 +71,40 @@ func (app *AppContext) CheckIfError(err error) {
 	}
 }
 
-// LoadEnvFilesIfExist loads `.env` from `a.WorkingDirectory` only if exist.
-// If load failes, the application would exist.
-func (app *AppContext) LoadEnvFilesIfExist() {
-	envPath := filepath.Join(app.WorkingDirectory, ".env")
+// Dbg outputs a `v` if app has "verbose flag" set and additionally adds a new line.
+func (app *AppContext) Dbg(v any) {
+	app.Dbgf("%v%v", v, app.EOL)
+}
 
-	if _, err := os.Stat(envPath); err == nil {
-		// file exists, try load ...
-		app.CheckIfError(
-			godotenv.Load(envPath),
-		)
-	} else if !os.IsNotExist(err) {
-		// could not check for .env
-		app.CheckIfError(err)
+// Dbgf outputs a `v` if app has "verbose flag" set, similar to Printf().
+func (app *AppContext) Dbgf(format string, v ...any) {
+	if app.Verbose {
+		app.Log.Printf(format, v...)
+	}
+}
+
+// EnsureAppDir ensures that the root directory for this app inside
+// `HomeDirectory` exists and returns its path.
+func (app *AppContext) EnsureAppDir() (string, error) {
+	appDir := filepath.Join(app.HomeDirectory, ".gai")
+
+	if stat, err := os.Stat(appDir); err == nil {
+		// exists
+
+		if !stat.IsDir() {
+			// ... but no file
+			return appDir, fmt.Errorf("'%v' is not directory", appDir)
+		}
+
+		return appDir, nil
+	} else if os.IsNotExist(err) {
+		// does not exist => create
+		err := os.MkdirAll(appDir, 0755)
+
+		return appDir, err
+	} else {
+		// other error
+		return appDir, err
 	}
 }
 

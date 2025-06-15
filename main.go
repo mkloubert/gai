@@ -23,38 +23,54 @@
 package main
 
 import (
+	"fmt"
+	"log"
 	"os"
 
 	"github.com/mkloubert/gai/commands"
 	"github.com/mkloubert/gai/types"
 
-	"github.com/mkloubert/gai/utils"
 	"github.com/spf13/cobra"
 )
 
 func main() {
-	// current working directory
-	cwd, err := os.Getwd()
-	utils.CheckIfError(err)
-
 	var app *types.AppContext
+
+	rootCmd := &cobra.Command{
+		Use:   "gai",
+		Short: "gAI is a command line tool for AI tasks",
+		Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai.",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			app.Init()
+
+			app.Dbg(fmt.Sprintf("Executing command '%v' ...", cmd.Name()))
+		},
+		Run: func(cmd *cobra.Command, args []string) {
+			commands.RunRootCommand(app, cmd, args)
+		},
+	}
 
 	// setup app command
 	app = &types.AppContext{
-		RootCommand: &cobra.Command{
-			Use:   "gai",
-			Short: "gai is a command line tool for AI tasks",
-			Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai.",
-			Run: func(cmd *cobra.Command, args []string) {
-				commands.RunRootCommand(app, cmd, args)
-			},
-		},
-		Stderr:           os.Stderr,
-		WorkingDirectory: cwd,
+		RootCommand: rootCmd,
+		Stderr:      os.Stderr,
+		Stdin:       os.Stdin,
+		Stdout:      os.Stdout,
 	}
 
-	// load .env file, if exists
-	app.LoadEnvFilesIfExist()
+	// use these flags and options everywhere
+	rootCmd.PersistentFlags().StringVarP(&app.WorkingDirectory, "cwd", "", "", "current working directory")
+	rootCmd.PersistentFlags().StringVarP(&app.EOL, "eol", "", fmt.Sprintln(), "custom EOL char sequence")
+	rootCmd.PersistentFlags().StringArrayVarP(&app.EnvFiles, "env-file", "", []string{}, "one or more env file to load")
+	rootCmd.PersistentFlags().StringVarP(&app.HomeDirectory, "home", "", "", "user's home directory")
+	rootCmd.PersistentFlags().BoolVarP(&app.SkipDefaultEnvFiles, "skip-env-files", "", false, "do not load default .env files")
+	rootCmd.PersistentFlags().StringVarP(&app.Model, "model", "", "", "default chat model")
+	rootCmd.PersistentFlags().BoolVarP(&app.Verbose, "verbose", "", false, "verbose output")
+
+	commands.Init_ask_Command(app, rootCmd)
+	commands.Init_list_Command(app, rootCmd)
+
+	app.Log = log.New(app, "", log.Ldate|log.Ltime)
 
 	// execute app
 	app.Run()
