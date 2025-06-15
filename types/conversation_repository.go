@@ -25,11 +25,12 @@ package types
 // ConversationRepository represents a file of an AI conversation.
 type ConversationRepository struct {
 	// Conversations stores the conversation for each directory.
-	Conversations map[string]ConversationRepositoryConversation `yaml:"conversations"`
+	// The key is the ID, usually the current directory, of the conversation.
+	Conversations map[string]ConversationRepositoryConversationContextes `yaml:"conversations"`
 }
 
 // ConversationRepositoryConversation is a list of `ConversationRepositoryConversationItem`.
-type ConversationRepositoryConversation = []ConversationRepositoryConversationItem
+type ConversationRepositoryConversation = []*ConversationRepositoryConversationItem
 
 // ConversationRepositoryConversationItem is an item in a `ConversationRepositoryConversation`.
 type ConversationRepositoryConversationItem struct {
@@ -38,3 +39,12 @@ type ConversationRepositoryConversationItem struct {
 	// Role stores the role like `assistant`, `system` or `user`
 	Role string `yaml:"role"`
 }
+
+// ConversationRepositoryConversationContext stores a conversation in a specific context.
+type ConversationRepositoryConversationContext struct {
+	// Conversation stores the underlying conversation.
+	Conversation ConversationRepositoryConversation `yaml:"conversation"`
+}
+
+// ConversationRepositoryConversationContextes stores contextes grouped by their name/ID.
+type ConversationRepositoryConversationContextes map[string]*ConversationRepositoryConversationContext

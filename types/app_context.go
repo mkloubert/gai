@@ -27,6 +27,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -37,6 +38,8 @@ type AppContext struct {
 	AI AIClient
 	// ApiKey stores a global API key.
 	ApiKey string
+	// Context stores the name of the current context.
+	Context string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
 	EnvFiles []string
 	// EnvFiles stores environment variables.
@@ -59,6 +62,10 @@ type AppContext struct {
 	Stdin *os.File
 	// Stdout stores the stream for default outputs.
 	Stdout *os.File
+	// TerminalFormatter defines the custom terminal formatter.
+	TerminalFormatter string
+	// TerminalFormatter defines the custom terminal style.
+	TerminalStyle string
 	// Verbose indicates if application should also output debug messages.
 	Verbose bool
 	// WorkingDirectory stores the current root directory.
@@ -108,6 +115,16 @@ func (app *AppContext) EnsureAppDir() (string, error) {
 		// other error
 		return appDir, err
 	}
+}
+
+// GetCurrentContext returns the name of the current AI context.
+func (app *AppContext) GetCurrentContext() string {
+	context := strings.TrimSpace(app.Context)
+	if context != "" {
+		return context
+	}
+
+	return strings.TrimSpace(app.Getenv("GAI_CONTEXT"))
 }
 
 // Run runs the application.

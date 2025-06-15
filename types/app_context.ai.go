@@ -47,6 +47,7 @@ func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
 	if provider == "openai" {
 		apiKey := strings.TrimSpace(app.ApiKey)
 		if apiKey == "" {
+			// now try env variable
 			apiKey = strings.TrimSpace(app.Getenv("OPENAI_API_KEY"))
 		}
 		if apiKey == "" {

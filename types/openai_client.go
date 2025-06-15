@@ -127,11 +127,11 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 
 	answer := assistantMessage.Content
 
-	conversation = append(conversation, ConversationRepositoryConversationItem{
+	conversation = append(conversation, &ConversationRepositoryConversationItem{
 		Role:    "user",
 		Content: userMessage.Content,
 	})
-	conversation = append(conversation, ConversationRepositoryConversationItem{
+	conversation = append(conversation, &ConversationRepositoryConversationItem{
 		Role:    "assistant",
 		Content: answer,
 	})

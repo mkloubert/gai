@@ -28,6 +28,8 @@ func (app *AppContext) NewChatContext() (*ChatContext, error) {
 		App: app,
 	}
 
+	chat.SwitchContext(app.Context)
+
 	err := chat.ReloadAllConversations()
 
 	return chat, err

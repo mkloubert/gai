@@ -39,7 +39,7 @@ func main() {
 	rootCmd := &cobra.Command{
 		Use:   "gai",
 		Short: "gAI is a command line tool for AI tasks",
-		Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai.",
+		Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			app.Init()
 
@@ -60,16 +60,20 @@ func main() {
 
 	// use these flags and options everywhere
 	rootCmd.PersistentFlags().StringVarP(&app.ApiKey, "api-key", "", "", "global API key to use")
+	rootCmd.PersistentFlags().StringVarP(&app.Context, "context", "c", "", "custom context")
 	rootCmd.PersistentFlags().StringVarP(&app.WorkingDirectory, "cwd", "", "", "current working directory")
 	rootCmd.PersistentFlags().StringVarP(&app.EOL, "eol", "", fmt.Sprintln(), "custom EOL char sequence")
 	rootCmd.PersistentFlags().StringArrayVarP(&app.EnvFiles, "env-file", "", []string{}, "one or more env file to load")
 	rootCmd.PersistentFlags().StringVarP(&app.HomeDirectory, "home", "", "", "user's home directory")
 	rootCmd.PersistentFlags().BoolVarP(&app.SkipDefaultEnvFiles, "skip-env-files", "", false, "do not load default .env files")
 	rootCmd.PersistentFlags().StringVarP(&app.Model, "model", "", "", "default chat model")
+	rootCmd.PersistentFlags().StringVarP(&app.TerminalFormatter, "terminal-formatter", "", "", "custom terminal formatter")
+	rootCmd.PersistentFlags().StringVarP(&app.TerminalStyle, "terminal-style", "", "", "custom terminal style")
 	rootCmd.PersistentFlags().BoolVarP(&app.Verbose, "verbose", "", false, "verbose output")
 
 	commands.Init_chat_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
+	commands.Init_reset_Command(app, rootCmd)
 
 	app.Log = log.New(app, "", log.Ldate|log.Ltime)
 

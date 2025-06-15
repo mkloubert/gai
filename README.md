@@ -18,6 +18,7 @@ in your terminal.
 
 | Name                     | Description                                                                                                                                                    | Example / Default     |
 | ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `GAI_CONTEXT`            | Name of the current AI context.                                                                                                                                | `Project X`           |
 | `GAI_DEFAULT_CHAT_MODEL` | The default provider and model for chat conversations.                                                                                                         | `openai:gpt-4.1-mini` |
 | `GAI_TERMINAL_FORMATTER` | Default formatter for syntax highlighting in terminal. See [chroma project](https://github.com/alecthomas/chroma/tree/master/formatters) for more information. | `terminal16m`         |
 | `GAI_TERMINAL_STYLE`     | Default style for syntax highlighting in terminal.. See [chroma project](https://github.com/alecthomas/chroma/tree/master/styles) for more information.        | `dracula`             |

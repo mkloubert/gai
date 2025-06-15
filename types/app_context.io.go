@@ -29,9 +29,15 @@ import (
 )
 
 func (app *AppContext) getBestChromaFormatterName() string {
-	GAI_TERMINAL_FORMATTER := app.Getenv("GAI_TERMINAL_FORMATTER")
-	if GAI_TERMINAL_FORMATTER != "" {
-		return GAI_TERMINAL_FORMATTER
+	terminalFormatter := strings.TrimSpace(app.TerminalFormatter)
+	if terminalFormatter == "" {
+		terminalFormatter = strings.TrimSpace(
+			app.Getenv("GAI_TERMINAL_FORMATTER"),
+		)
+	}
+
+	if terminalFormatter != "" {
+		return terminalFormatter
 	}
 
 	switch os := runtime.GOOS; os {
@@ -45,9 +51,15 @@ func (app *AppContext) getBestChromaFormatterName() string {
 }
 
 func (app *AppContext) getBestChromaStyleName() string {
-	GAI_TERMINAL_STYLE := app.Getenv("GAI_TERMINAL_STYLE")
-	if GAI_TERMINAL_STYLE != "" {
-		return GAI_TERMINAL_STYLE
+	terminalStyle := strings.TrimSpace(app.TerminalStyle)
+	if terminalStyle == "" {
+		terminalStyle = strings.TrimSpace(
+			app.Getenv("GAI_TERMINAL_STYLE"),
+		)
+	}
+
+	if terminalStyle != "" {
+		return terminalStyle
 	}
 
 	return "dracula"

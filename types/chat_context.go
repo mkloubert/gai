@@ -26,8 +26,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/gosimple/slug"
 )
 
 // ChatContext handles chat context
@@ -35,10 +37,15 @@ type ChatContext struct {
 	// App stores the underlying application context.
 	App *AppContext
 	// Conversations stores the repository with all conversations usually grouped by directory.
-	Conversations *ConversationRepository
+	Conversations  *ConversationRepository
+	currentContext string
 }
 
-func (ctx *ChatContext) ensureConversations() *ConversationRepository {
+func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversationContext {
+	var app = ctx.App
+	var cwd = app.WorkingDirectory
+	var currentContext = ctx.currentContext
+
 	repo := ctx.Conversations
 	if repo == nil {
 		repo = &ConversationRepository{}
@@ -46,23 +53,36 @@ func (ctx *ChatContext) ensureConversations() *ConversationRepository {
 		ctx.Conversations = repo
 	}
 
-	return repo
+	if repo.Conversations == nil {
+		repo.Conversations = map[string]ConversationRepositoryConversationContextes{}
+	}
+
+	conversations, ok := repo.Conversations[cwd]
+	if !ok || conversations == nil {
+		conversations = ConversationRepositoryConversationContextes{}
+
+		repo.Conversations[cwd] = conversations
+	}
+
+	context, ok := conversations[currentContext]
+	if !ok || context == nil {
+		context = &ConversationRepositoryConversationContext{}
+
+		conversations[currentContext] = context
+	}
+
+	if context.Conversation == nil {
+		context.Conversation = make(ConversationRepositoryConversation, 0)
+	}
+
+	return context
 }
 
 // GetConversation returns conversation for the current directory.
 func (ctx *ChatContext) GetConversation() (ConversationRepositoryConversation, error) {
-	app := ctx.App
+	conversatioNContext := ctx.ensureConversation()
 
-	appConversations := make(ConversationRepositoryConversation, 0)
-
-	if ctx.Conversations != nil {
-		items, ok := ctx.Conversations.Conversations[app.WorkingDirectory]
-		if ok {
-			appConversations = items
-		}
-	}
-
-	return appConversations, nil
+	return conversatioNContext.Conversation, nil
 }
 
 func (ctx *ChatContext) getConversaionsFilePath() (string, error) {
@@ -121,16 +141,25 @@ func (ctx *ChatContext) ResetConversation() error {
 
 	app.Dbg(fmt.Sprintf("Resetting conversation of %v ...", app.WorkingDirectory))
 
-	if ctx.Conversations == nil {
-		ctx.Conversations = &ConversationRepository{}
-	}
-	if ctx.Conversations.Conversations == nil {
-		ctx.Conversations.Conversations = map[string]ConversationRepositoryConversation{}
-	}
-
-	ctx.Conversations.Conversations[app.WorkingDirectory] = make(ConversationRepositoryConversation, 0)
+	conversationContext := ctx.ensureConversation()
+	conversationContext.Conversation = make(ConversationRepositoryConversation, 0)
 
 	return nil
+}
+
+// SwitchContext switches the context.
+func (ctx *ChatContext) SwitchContext(c string) string {
+	newContextName := strings.TrimSpace(
+		strings.ToLower(
+			slug.MakeLang(c, "en"),
+		),
+	)
+
+	ctx.currentContext = newContextName
+
+	ctx.ensureConversation()
+
+	return newContextName
 }
 
 // UpdateConversation updates the conversation file with all conversations.
@@ -145,9 +174,9 @@ func (ctx *ChatContext) UpdateConversation() error {
 	app.Dbg(fmt.Sprintf("Will write conversations to '%v' ...", conversationFile))
 	app.Dbg("Creating YAML data ...")
 
-	repo := ctx.ensureConversations()
+	ctx.ensureConversation()
 
-	data, err := yaml.Marshal(&repo)
+	data, err := yaml.Marshal(&ctx.Conversations)
 	if err != nil {
 		return err
 	}
@@ -163,18 +192,8 @@ func (ctx *ChatContext) UpdateConversation() error {
 
 // UpdateConversationWith updates the conversation file with all conversations.
 func (ctx *ChatContext) UpdateConversationWith(conversation ConversationRepositoryConversation) error {
-	app := ctx.App
-
-	repo := ctx.ensureConversations()
-	if repo.Conversations == nil {
-		repo.Conversations = map[string]ConversationRepositoryConversation{}
-	}
-
-	if conversation != nil {
-		repo.Conversations[app.WorkingDirectory] = conversation
-	} else {
-		repo.Conversations[app.WorkingDirectory] = make(ConversationRepositoryConversation, 0)
-	}
+	conversationContext := ctx.ensureConversation()
+	conversationContext.Conversation = conversation
 
 	return ctx.UpdateConversation()
 }
