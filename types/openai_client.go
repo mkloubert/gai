@@ -54,7 +54,24 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, fmt.Errorf("no chat ai model defined")
 	}
 
-	url := "https://api.openai.com/v1/chat/completions"
+	app := ctx.App
+
+	maxTokens, err := app.GetMaxTokens()
+	if err != nil {
+		return "", conversation, err
+	}
+
+	temperature, err := app.GetTemperature()
+	if err != nil {
+		return "", conversation, err
+	}
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "https://api.openai.com" // use default
+	}
+
+	url := fmt.Sprintf("%v/v1/chat/completions", baseUrl)
 
 	userMessage := OpenAIChatMessage{
 		Content: msg,
@@ -73,11 +90,11 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 	messages = append(messages, userMessage)
 
 	body := map[string]interface{}{
-		"model":    model,
-		"messages": messages,
-		"stream":   false,
-		// TODO: read from settings
-		"temperature": 0.3,
+		"model":                 model,
+		"messages":              messages,
+		"stream":                false,
+		"temperature":           temperature,
+		"max_completion_tokens": maxTokens,
 	}
 
 	jsonData, err := json.Marshal(&body)

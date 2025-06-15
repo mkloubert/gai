@@ -38,6 +38,8 @@ type AppContext struct {
 	AI AIClient
 	// ApiKey stores a global API key.
 	ApiKey string
+	// BaseUrl stores base URL.
+	BaseUrl string
 	// Context stores the name of the current context.
 	Context string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
@@ -50,6 +52,8 @@ type AppContext struct {
 	HomeDirectory string
 	// Log is the logger the app should use.
 	Log *log.Logger
+	// MaxTokens stores the maximum number of tokens.
+	MaxTokens int64
 	// Model is the default chat model to use.
 	Model string
 	// RootCommand stores the root command.
@@ -62,6 +66,8 @@ type AppContext struct {
 	Stdin *os.File
 	// Stdout stores the stream for default outputs.
 	Stdout *os.File
+	// Temperature stores the temperature for AI operations.
+	Temperature float64
 	// TerminalFormatter defines the custom terminal formatter.
 	TerminalFormatter string
 	// TerminalFormatter defines the custom terminal style.

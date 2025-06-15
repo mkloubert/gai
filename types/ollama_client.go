@@ -48,7 +48,19 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		return "", conversation, fmt.Errorf("no chat ai model defined")
 	}
 
-	url := "http://localhost:11434/api/chat"
+	app := ctx.App
+
+	temperature, err := app.GetTemperature()
+	if err != nil {
+		return "", conversation, err
+	}
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "http://localhost:11434" // use default
+	}
+
+	url := fmt.Sprintf("%v/api/chat", baseUrl)
 
 	userMessage := OllamaAIChatMessage{
 		Content: msg,
@@ -70,8 +82,9 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		"model":    c.chatModel,
 		"messages": messages,
 		"stream":   false,
-		// TODO: read from settings
-		"temperature": 0.3,
+		"options": map[string]interface{}{
+			"temperature": temperature,
+		},
 	}
 
 	jsonData, err := json.Marshal(&body)
