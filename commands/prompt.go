@@ -33,35 +33,26 @@ import (
 	"golang.org/x/term"
 )
 
-// Init_chat_Command initializes the `chat` command.
-func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
-	var reset bool
-
-	var chatCmd = &cobra.Command{
-		Use:     "chat [QUESTION]",
-		Aliases: []string{"c"},
-		Short:   "AI chat",
-		Long:    `Asks the AI a question.`,
+// Init_prompt_Command initializes the `prompt` command.
+func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var promptCmd = &cobra.Command{
+		Use:     "prompt [PROMPT]",
+		Aliases: []string{"p"},
+		Short:   "AI prompt",
+		Long:    `Sends a prompt to AI.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
-			message, err := app.GetAIMessage(args)
+			prompt, err := app.GetAIMessage(args)
 			app.CheckIfError(err)
 
-			message = strings.TrimSpace(message)
-			if message == "" {
-				app.CheckIfError(errors.New("no chat message defined"))
+			prompt = strings.TrimSpace(prompt)
+			if prompt == "" {
+				app.CheckIfError(errors.New("no prompt defined"))
 			}
 
-			chat, err := app.NewChatContext()
-			app.CheckIfError(err)
-
-			if reset {
-				chat.ResetConversation()
-			}
-
-			options := make([]types.AIClientChatOptions, 0)
+			options := make([]types.AIClientPromptOptions, 0)
 
 			for _, f := range files {
 				file, err := os.Open(f)
@@ -69,31 +60,26 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 				defer file.Close()
 
-				options = append(options, types.AIClientChatOptions{
+				options = append(options, types.AIClientPromptOptions{
 					Files: []io.Reader{file},
 				})
 			}
 
-			answer, _, err := app.AI.Chat(chat, message, options...)
+			response, err := app.AI.Prompt(prompt, options...)
 			app.CheckIfError(err)
 
 			if term.IsTerminal(int(os.Stdout.Fd())) {
 				chroma := app.GetChromaSettings()
-				chroma.HighlightMarkdown(answer)
+				chroma.HighlightMarkdown(response.Content)
 
 				app.Writeln()
 			} else {
-				app.WriteString(answer)
+				app.WriteString(response.Content)
 			}
-
-			err = chat.UpdateConversation()
-			app.CheckIfError(err)
 		},
 	}
 
-	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
-
 	parentCmd.AddCommand(
-		chatCmd,
+		promptCmd,
 	)
 }

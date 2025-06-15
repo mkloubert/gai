@@ -35,7 +35,75 @@ import (
 // OllamaClient is an `AIClient` implementation for OpenAI.
 type OpenAIClient struct {
 	apiKey    string
+	app       *AppContext
 	chatModel string
+}
+
+func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, item *ConversationRepositoryConversationItem) ([]OpenAIChatMessage, error) {
+	if item.Contents != nil {
+		newMessage := &OpenAIChatMessage{
+			Content: make(OpenAIChatMessageContent, 0),
+			Role:    item.Role,
+		}
+
+		for _, content := range item.Contents {
+			var newItem interface{}
+
+			if content.Type == "text" {
+				newItem = &OpenAIChatMessageContentTextItem{
+					Text: content.Content,
+					Type: "text",
+				}
+			} else if content.Type == "image" {
+				newItem = &OpenAIChatMessageContentImageItem{
+					ImageUrl: OpenAIChatMessageContentImageItemUrl{
+						Url: content.Content,
+					},
+					Type: "image_url",
+				}
+			}
+
+			if newItem != nil {
+				newMessage.Content = append(newMessage.Content, newItem)
+			} else {
+				return messages, fmt.Errorf("content type '%v' not allowed", content.Type)
+			}
+		}
+
+		messages = append(messages, *newMessage)
+	}
+
+	return messages, nil
+}
+
+func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationItem, files []io.Reader) error {
+	for _, f := range files {
+		if f != nil {
+			data, err := io.ReadAll(f)
+			if err != nil {
+				return err
+			}
+
+			mimeType := http.DetectContentType(data)
+
+			if strings.HasPrefix(mimeType, "image/") {
+				dataURI, err := c.AsSupportedImageFormatString(data)
+				if err != nil {
+					return err
+				}
+
+				newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+					Content: dataURI,
+					Type:    "image",
+				}
+				item.Contents = append(item.Contents, newUserImageItem)
+			} else {
+				return fmt.Errorf("mime type '%v' not supported", mimeType)
+			}
+		}
+	}
+
+	return nil
 }
 
 // AsSupportedImageFormatString reads data as image and tries to convert
@@ -100,82 +168,28 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	// add files
 	for _, o := range opts {
-		if o.Files != nil {
-			for _, f := range o.Files {
-				if f != nil {
-					data, err := io.ReadAll(f)
-					if err != nil {
-						return "", conversation, err
-					}
-
-					mimeType := http.DetectContentType(data)
-
-					if strings.HasPrefix(mimeType, "image/") {
-						dataURI, err := c.AsSupportedImageFormatString(data)
-						if err != nil {
-							return "", conversation, err
-						}
-
-						newUserImageItem := &ConversationRepositoryConversationItemContentItem{
-							Content: dataURI,
-							Type:    "image",
-						}
-						userMessage.Contents = append(userMessage.Contents, newUserImageItem)
-					} else {
-						return "", conversation, fmt.Errorf("mime type '%v' not supported", mimeType)
-					}
-				}
-			}
-		}
+		c.appendFilesTo(userMessage, o.Files)
 	}
 
 	messages := []OpenAIChatMessage{}
-	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
-		if item.Contents != nil {
-			newMessage := &OpenAIChatMessage{
-				Content: make(OpenAIChatMessageContent, 0),
-				Role:    item.Role,
-			}
-
-			for _, content := range item.Contents {
-				var newItem interface{}
-
-				if content.Type == "text" {
-					newItem = &OpenAIChatMessageContentTextItem{
-						Text: content.Content,
-						Type: "text",
-					}
-				} else if content.Type == "image" {
-					newItem = &OpenAIChatMessageContentImageItem{
-						ImageUrl: OpenAIChatMessageContentImageItemUrl{
-							Url: content.Content,
-						},
-						Type: "image_url",
-					}
-				}
-
-				if newItem != nil {
-					newMessage.Content = append(newMessage.Content, newItem)
-				} else {
-					return fmt.Errorf("content type '%v' not allowed", content.Type)
-				}
-			}
-
-			messages = append(messages, *newMessage)
-		}
-
-		return nil
-	}
 
 	// add previous conversation
 	for _, item := range conversation {
-		err := appendConversationItem(item)
+		m, err := c.appendConversationItemTo(messages, item)
 		if err != nil {
 			return "", conversation, err
 		}
+
+		messages = m
 	}
+
 	// add user message
-	appendConversationItem(userMessage)
+	m, err := c.appendConversationItemTo(messages, userMessage)
+	if err != nil {
+		return "", conversation, err
+	}
+
+	messages = m
 
 	body := map[string]interface{}{
 		"model":                 model,
@@ -209,13 +223,7 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// load the response
-		responseData, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return "", conversation, err
-		}
-
-		return "", conversation, fmt.Errorf("unexpected response %v (%v)", resp.StatusCode, string(responseData))
+		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
 	}
 
 	responseTime := app.GetISOTime()
@@ -263,6 +271,126 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 // ChatModel returns the current chat model.
 func (c *OpenAIClient) ChatModel() string {
 	return c.chatModel
+}
+
+// Prompt does a single AI prompt with a specific `msg`.
+func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClientPromptResponse, error) {
+	promptResponse := AIClientPromptResponse{
+		Content: "",
+		Model:   "",
+	}
+
+	apiKey := strings.TrimSpace(c.apiKey)
+	if apiKey == "" {
+		return promptResponse, fmt.Errorf("no OpenAI api key defined")
+	}
+
+	model := strings.TrimSpace(strings.ToLower(c.chatModel))
+	if model == "" {
+		return promptResponse, fmt.Errorf("no chat ai model defined")
+	}
+
+	promptResponse.Model = model
+
+	app := c.app
+
+	maxTokens, err := app.GetMaxTokens()
+	if err != nil {
+		return promptResponse, err
+	}
+
+	temperature, err := app.GetTemperature()
+	if err != nil {
+		return promptResponse, err
+	}
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "https://api.openai.com" // use default
+	}
+
+	url := fmt.Sprintf("%v/v1/chat/completions", baseUrl)
+
+	userMessage := &ConversationRepositoryConversationItem{
+		Contents: make(ConversationRepositoryConversationItemContents, 0),
+		Model:    model,
+		Role:     "user",
+	}
+	newUserTextItem := &ConversationRepositoryConversationItemContentItem{
+		Content: msg,
+		Type:    "text",
+	}
+	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
+
+	// add files
+	for _, o := range opts {
+		c.appendFilesTo(userMessage, o.Files)
+	}
+
+	messages := []OpenAIChatMessage{}
+
+	// add user message
+	m, err := c.appendConversationItemTo(messages, userMessage)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	messages = m
+
+	body := map[string]interface{}{
+		"model":                 model,
+		"messages":              messages,
+		"stream":                false,
+		"temperature":           temperature,
+		"max_completion_tokens": maxTokens,
+	}
+
+	jsonData, err := json.Marshal(&body)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonData)))
+	if err != nil {
+		return promptResponse, err
+	}
+
+	// setup ...
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+	// ... and finally send the JSON data
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return promptResponse, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return promptResponse, fmt.Errorf("unexpected response %v", resp.StatusCode)
+	}
+
+	// load the response
+	responseData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	var chatResponse OpenAIChatCompletionResponseV1
+	err = json.Unmarshal(responseData, &chatResponse)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	answer := ""
+	if len(chatResponse.Choices) > 0 {
+		answer = chatResponse.Choices[0].Message.Content
+	}
+
+	promptResponse.Content = answer
+	promptResponse.Model = chatResponse.Model
+
+	return promptResponse, nil
 }
 
 // Provider returns the name of the provider.

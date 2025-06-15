@@ -29,8 +29,8 @@ import (
 	"strings"
 )
 
-const initalOllamaChatModel = "llama3.1:8b"
-const initalOpenAIChatModel = "gpt-4.1-mini"
+const initalOllamaChatModel = "ollama:llama3.1:8b"
+const initalOpenAIChatModel = "openai:gpt-4.1-mini"
 
 // GetBaseUrl returns the base URL for API operations, if defined.
 func (app *AppContext) GetBaseUrl() string {
@@ -91,14 +91,44 @@ func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
 		strings.ToLower(provider),
 	)
 
+	getModelNameOnly := func(m string) (string, error) {
+		prefix := fmt.Sprintf("%v:", provider)
+		if strings.HasPrefix(m, prefix) {
+			return strings.TrimSpace(m[len(prefix):]), nil
+		}
+
+		return m, errors.New("could not get model format")
+	}
+
 	if provider == "ollama" {
+		m := strings.TrimSpace(app.Model)
+		if m == "" {
+			m = initalOllamaChatModel
+		}
+
+		chatModel, err := getModelNameOnly(m)
+		if err != nil {
+			return nil, err
+		}
+
 		ollama := &OllamaClient{}
-		ollama.chatModel = initalOllamaChatModel
+		ollama.app = app
+		ollama.chatModel = chatModel
 
 		return ollama, nil
 	}
 
 	if provider == "openai" {
+		m := strings.TrimSpace(app.Model)
+		if m == "" {
+			m = initalOpenAIChatModel
+		}
+
+		chatModel, err := getModelNameOnly(m)
+		if err != nil {
+			return nil, err
+		}
+
 		apiKey := strings.TrimSpace(app.ApiKey)
 		if apiKey == "" {
 			// now try env variable
@@ -109,8 +139,9 @@ func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
 		}
 
 		openai := &OpenAIClient{}
-		openai.chatModel = initalOpenAIChatModel
 		openai.apiKey = apiKey
+		openai.app = app
+		openai.chatModel = chatModel
 
 		return openai, nil
 	}

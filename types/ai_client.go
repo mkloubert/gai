@@ -33,6 +33,8 @@ type AIClient interface {
 	Chat(ctx *ChatContext, msg string, opts ...AIClientChatOptions) (string, ConversationRepositoryConversation, error)
 	// ChatModel returns the current chat model.
 	ChatModel() string
+	// Prompt does a single AI prompt with a specific `msg`.
+	Prompt(msg string, opts ...AIClientPromptOptions) (AIClientPromptResponse, error)
 	// Provider returns the name of the provider.
 	Provider() string
 	// SetChatModel sets the current chat model.
@@ -43,4 +45,18 @@ type AIClient interface {
 type AIClientChatOptions struct {
 	// Files stores list of one or more file to use for the submission.
 	Files []io.Reader
+}
+
+// AIClientPromptOptions stores additional options for `Prompt` method.
+type AIClientPromptOptions struct {
+	// Files stores list of one or more file to use for the submission.
+	Files []io.Reader
+}
+
+// AIClientPromptResponse stores information about a successful prompt response.
+type AIClientPromptResponse struct {
+	// Content stores the content.
+	Content string
+	// Model stores the model that has been used.
+	Model string
 }

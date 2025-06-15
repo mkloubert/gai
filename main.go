@@ -77,6 +77,7 @@ func main() {
 
 	commands.Init_chat_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
+	commands.Init_prompt_Command(app, rootCmd)
 	commands.Init_reset_Command(app, rootCmd)
 
 	app.Log = log.New(app, "", log.Ldate|log.Ltime)

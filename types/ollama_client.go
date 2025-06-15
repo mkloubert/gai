@@ -34,7 +34,64 @@ import (
 
 // OllamaClient is an `AIClient` implementation for Ollama.
 type OllamaClient struct {
+	app       *AppContext
 	chatModel string
+}
+
+func (c *OllamaClient) appendConversationItemTo(messages []OllamaAIChatMessage, item *ConversationRepositoryConversationItem) ([]OllamaAIChatMessage, error) {
+	if item.Contents != nil {
+		newMessage := &OllamaAIChatMessage{
+			Content: "",
+			Images:  make([]string, 0),
+			Role:    item.Role,
+		}
+
+		for _, content := range item.Contents {
+			if content.Type == "text" {
+				newMessage.Content = content.Content
+			} else if content.Type == "image" {
+				newMessage.Images = append(newMessage.Images, content.Content)
+			} else {
+				return messages, fmt.Errorf("content type '%v' not allowed", content.Type)
+			}
+		}
+
+		messages = append(messages, *newMessage)
+	}
+
+	return messages, nil
+}
+
+func (c *OllamaClient) appendFilesTo(item *ConversationRepositoryConversationItem, files []io.Reader) error {
+	for _, f := range files {
+		if f != nil {
+			data, err := io.ReadAll(f)
+			if err != nil {
+				return err
+			}
+
+			mimeType := http.DetectContentType(data)
+
+			if strings.HasPrefix(mimeType, "image/") {
+				dataURI, err := c.AsSupportedImageFormatString(data)
+				if err != nil {
+					return err
+				}
+
+				comma := strings.Index(dataURI, ",")
+
+				newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+					Content: dataURI[comma+1:],
+					Type:    "image",
+				}
+				item.Contents = append(item.Contents, newUserImageItem)
+			} else {
+				return fmt.Errorf("mime type '%v' not supported", mimeType)
+			}
+		}
+	}
+
+	return nil
 }
 
 // AsSupportedImageFormatString reads data as image and tries to convert
@@ -89,68 +146,31 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	// add files
 	for _, o := range opts {
-		if o.Files != nil {
-			for _, f := range o.Files {
-				if f != nil {
-					data, err := io.ReadAll(f)
-					if err != nil {
-						return "", conversation, err
-					}
-
-					mimeType := http.DetectContentType(data)
-
-					if strings.HasPrefix(mimeType, "image/") {
-						dataURI, err := c.AsSupportedImageFormatString(data)
-						if err != nil {
-							return "", conversation, err
-						}
-
-						comma := strings.Index(dataURI, ",")
-
-						newUserImageItem := &ConversationRepositoryConversationItemContentItem{
-							Content: dataURI[comma+1:],
-							Type:    "image",
-						}
-						userMessage.Contents = append(userMessage.Contents, newUserImageItem)
-					} else {
-						return "", conversation, fmt.Errorf("mime type '%v' not supported", mimeType)
-					}
-				}
-			}
+		err := c.appendFilesTo(userMessage, o.Files)
+		if err != nil {
+			return "", conversation, err
 		}
 	}
 
 	messages := []OllamaAIChatMessage{}
-	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
-		if item.Contents != nil {
-			newMessage := &OllamaAIChatMessage{
-				Content: "",
-				Images:  make([]string, 0),
-				Role:    item.Role,
-			}
 
-			for _, content := range item.Contents {
-				if content.Type == "text" {
-					newMessage.Content = content.Content
-				} else if content.Type == "image" {
-					newMessage.Images = append(newMessage.Images, content.Content)
-				} else {
-					return fmt.Errorf("content type '%v' not allowed", content.Type)
-				}
-			}
-
-			messages = append(messages, *newMessage)
+	// add previous conversation
+	for _, item := range conversation {
+		m, err := c.appendConversationItemTo(messages, item)
+		if err != nil {
+			return "", conversation, err
 		}
 
-		return nil
+		messages = m
 	}
 
-	// add previuos conversation
-	for _, item := range conversation {
-		appendConversationItem(item)
-	}
 	// add user message
-	appendConversationItem(userMessage)
+	m, err := c.appendConversationItemTo(messages, userMessage)
+	if err != nil {
+		return "", conversation, err
+	}
+
+	messages = m
 
 	body := map[string]interface{}{
 		"model":    c.chatModel,
@@ -229,6 +249,124 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 // ChatModel returns the current chat model.
 func (c *OllamaClient) ChatModel() string {
 	return c.chatModel
+}
+
+// Prompt does a single AI prompt with a specific `msg`.
+func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClientPromptResponse, error) {
+	promptResponse := AIClientPromptResponse{
+		Content: "",
+		Model:   "",
+	}
+
+	model := strings.TrimSpace(strings.ToLower(c.chatModel))
+	if model == "" {
+		return promptResponse, fmt.Errorf("no chat ai model defined")
+	}
+
+	promptResponse.Model = model
+
+	app := c.app
+
+	temperature, err := app.GetTemperature()
+	if err != nil {
+		return promptResponse, err
+	}
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "http://localhost:11434" // use default
+	}
+
+	url := fmt.Sprintf("%v/api/generate", baseUrl)
+
+	userMessage := &ConversationRepositoryConversationItem{
+		Contents: make(ConversationRepositoryConversationItemContents, 0),
+		Model:    model,
+		Role:     "user",
+	}
+	newUserTextItem := &ConversationRepositoryConversationItemContentItem{
+		Content: msg,
+		Type:    "text",
+	}
+	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
+
+	// add files
+	for _, o := range opts {
+		c.appendFilesTo(userMessage, o.Files)
+	}
+
+	messages := []OllamaAIChatMessage{}
+
+	m, err := c.appendConversationItemTo(messages, userMessage)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	messages = m
+
+	images := make([]string, 0)
+	for i, c := range userMessage.Contents {
+		if i < 1 {
+			continue
+		}
+
+		if c.Type == "image" {
+			images = append(images, c.Content)
+		} else {
+			return promptResponse, fmt.Errorf("content type '%v' not supported", c.Type)
+		}
+	}
+
+	body := map[string]interface{}{
+		"model":       model,
+		"prompt":      userMessage.Contents[0].Content,
+		"stream":      false,
+		"temperature": temperature,
+		"images":      images,
+	}
+
+	jsonData, err := json.Marshal(&body)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer([]byte(jsonData)))
+	if err != nil {
+		return promptResponse, err
+	}
+
+	// setup ...
+	req.Header.Set("Content-Type", "application/json")
+	// ... and finally send the JSON data
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return promptResponse, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return promptResponse, fmt.Errorf("unexpected response: %v", resp.StatusCode)
+	}
+
+	// load the response
+	responseData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	var completionResponse OllamaApiCompletionResponse
+	err = json.Unmarshal(responseData, &completionResponse)
+	if err != nil {
+		return promptResponse, err
+	}
+
+	answer := completionResponse.Response
+
+	promptResponse.Content = answer
+	promptResponse.Model = completionResponse.Model
+
+	return promptResponse, nil
 }
 
 // Provider returns the name of the provider.

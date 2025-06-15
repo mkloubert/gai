@@ -126,6 +126,13 @@ func (app *AppContext) EnsureAppDir() (string, error) {
 	}
 }
 
+// GetAIMessage returns whole AI message.
+func (app *AppContext) GetAIMessage(args []string) (string, error) {
+	message := strings.Join(args, " ")
+
+	return message, nil
+}
+
 // GetCurrentContext returns the name of the current AI context.
 func (app *AppContext) GetCurrentContext() string {
 	context := strings.TrimSpace(app.Context)

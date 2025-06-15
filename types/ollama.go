@@ -23,7 +23,7 @@
 package types
 
 // OllamaAIChatMessage is an item inside
-// OllamaAIChat.Conversation array
+// OllamaAIChat.Conversation array.
 type OllamaAIChatMessage struct {
 	// Content stores the message content.
 	Content string `json:"content,omitempty"`
@@ -33,10 +33,18 @@ type OllamaAIChatMessage struct {
 	Role string `json:"role,omitempty"`
 }
 
-// OllamaApiResponse is the data of a successful chat conversation response
+// OllamaApiResponse is the data of a successful chat conversation response.
 type OllamaApiChatCompletionResponse struct {
 	// Message stores the message.
 	Message OllamaAIChatMessage `json:"message,omitempty"`
 	// Model stores the model that has been used.
 	Model string `json:"model,omitempty"`
+}
+
+// OllamaApiCompletionResponse is the data of a successful completion response.
+type OllamaApiCompletionResponse struct {
+	// Model stores the model that has been used.
+	Model string `json:"model,omitempty"`
+	// Response stores the messagefrom assistant.
+	Response string `json:"response,omitempty"`
 }
