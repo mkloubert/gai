@@ -49,6 +49,8 @@ type AppContext struct {
 	EnvVars map[string]string
 	// EnvFiles stores string representing new line.
 	EOL string
+	// Files stores list of additional files to use for the current operation.
+	Files []string
 	// HomeDirectory is the absolute path to the user's home directory.
 	HomeDirectory string
 	// Log is the logger the app should use.
@@ -132,6 +134,25 @@ func (app *AppContext) GetCurrentContext() string {
 	}
 
 	return strings.TrimSpace(app.Getenv("GAI_CONTEXT"))
+}
+
+// GetFiles() returns the cleaned up and unsorted list of files as
+// full paths from `Files`.
+func (app *AppContext) GetFiles() ([]string, error) {
+	files := make([]string, 0)
+
+	if app.Files != nil {
+		for _, f := range app.Files {
+			file := f
+			if !filepath.IsAbs(file) {
+				file = filepath.Join(app.WorkingDirectory, file)
+			}
+
+			files = append(files, file)
+		}
+	}
+
+	return files, nil
 }
 
 // GetISOTime() returns current timestamp in UTC ISO 8601 format.

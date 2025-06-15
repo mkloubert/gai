@@ -76,6 +76,21 @@ type OpenAIChatMessageContent = []OpenAIChatMessageContentItem
 // OpenAIChatMessageContentItem is an item inside an `OpenAIChatMessageContent`.
 type OpenAIChatMessageContentItem = interface{}
 
+// OpenAIChatMessageContentImageItem represents an `OpenAIChatMessageContentItem` of type `text`.
+type OpenAIChatMessageContentImageItem struct {
+	// ImageUrl stores the URL information of the image.
+	ImageUrl OpenAIChatMessageContentImageItemUrl `json:"image_url,omitempty"`
+	// Type stores the value `image`.
+	Type string `json:"type,omitempty"`
+}
+
+type OpenAIChatMessageContentImageItemUrl struct {
+	// Detail stores detail level of the image.
+	Detail string `json:"image_url,omitempty"`
+	// Url stores the URL auf the image.
+	Url string `json:"url,omitempty"`
+}
+
 // OpenAIChatMessageContentTextItem represents an `OpenAIChatMessageContentItem` of type `text`.
 type OpenAIChatMessageContentTextItem struct {
 	// Text stores the message content.

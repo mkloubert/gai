@@ -24,6 +24,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -36,8 +37,21 @@ type OllamaClient struct {
 	chatModel string
 }
 
+// AsSupportedImageFormatString reads data as image and tries to convert
+// it to a supported data format as data URI.
+func (c *OllamaClient) AsSupportedImageFormatString(b []byte) (string, error) {
+	mimeType := http.DetectContentType(b)
+	encoded := base64.StdEncoding.EncodeToString(b)
+	dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+
+	if strings.HasPrefix(mimeType, "image/") {
+		return dataURI, nil
+	}
+	return dataURI, fmt.Errorf("mime type '%v' is not a supported image format", mimeType)
+}
+
 // Chat starts or continues a chat conversation with message in `msg` based on `ctx` and returns the new conversation.
-func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationRepositoryConversation, error) {
+func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOptions) (string, ConversationRepositoryConversation, error) {
 	conversation, err := ctx.GetConversation()
 	if err != nil {
 		return "", conversation, err
@@ -67,31 +81,65 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		Model:    model,
 		Role:     "user",
 	}
-	newUserItem := &ConversationRepositoryConversationItemContentItem{
+	newUserTextItem := &ConversationRepositoryConversationItemContentItem{
 		Content: msg,
 		Type:    "text",
 	}
-	userMessage.Contents = append(userMessage.Contents, newUserItem)
+	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
+
+	// add files
+	for _, o := range opts {
+		if o.Files != nil {
+			for _, f := range o.Files {
+				if f != nil {
+					data, err := io.ReadAll(f)
+					if err != nil {
+						return "", conversation, err
+					}
+
+					mimeType := http.DetectContentType(data)
+
+					if strings.HasPrefix(mimeType, "image/") {
+						dataURI, err := c.AsSupportedImageFormatString(data)
+						if err != nil {
+							return "", conversation, err
+						}
+
+						comma := strings.Index(dataURI, ",")
+
+						newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+							Content: dataURI[comma+1:],
+							Type:    "image",
+						}
+						userMessage.Contents = append(userMessage.Contents, newUserImageItem)
+					} else {
+						return "", conversation, fmt.Errorf("mime type '%v' not supported", mimeType)
+					}
+				}
+			}
+		}
+	}
 
 	messages := []OllamaAIChatMessage{}
 	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
 		if item.Contents != nil {
+			newMessage := &OllamaAIChatMessage{
+				Content: "",
+				Images:  make([]string, 0),
+				Role:    item.Role,
+			}
+
 			for _, content := range item.Contents {
-				var newMessage *OllamaAIChatMessage
-
 				if content.Type == "text" {
-					newMessage = &OllamaAIChatMessage{
-						Content: content.Content,
-						Role:    item.Role,
-					}
-				}
-
-				if newMessage != nil {
-					messages = append(messages, *newMessage)
+					newMessage.Content = content.Content
+				} else if content.Type == "image" {
+					newMessage.Images = append(newMessage.Images, content.Content)
 				} else {
 					return fmt.Errorf("content type '%v' not allowed", content.Type)
 				}
 			}
+
+			messages = append(messages, *newMessage)
 		}
 
 		return nil

@@ -24,6 +24,7 @@ package types
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -37,8 +38,21 @@ type OpenAIClient struct {
 	chatModel string
 }
 
+// AsSupportedImageFormatString reads data as image and tries to convert
+// it to a supported data format as data URI.
+func (c *OpenAIClient) AsSupportedImageFormatString(b []byte) (string, error) {
+	mimeType := http.DetectContentType(b)
+	encoded := base64.StdEncoding.EncodeToString(b)
+	dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+
+	if strings.HasPrefix(mimeType, "image/") {
+		return dataURI, nil
+	}
+	return dataURI, fmt.Errorf("mime type '%v' is not a supported image format", mimeType)
+}
+
 // Chat starts or continues a chat conversation with message in `msg` based on `ctx` and returns the new conversation.
-func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationRepositoryConversation, error) {
+func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOptions) (string, ConversationRepositoryConversation, error) {
 	conversation, err := ctx.GetConversation()
 	if err != nil {
 		return "", conversation, err
@@ -78,38 +92,76 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 		Model:    model,
 		Role:     "user",
 	}
-	newUserItem := &ConversationRepositoryConversationItemContentItem{
+	newUserTextItem := &ConversationRepositoryConversationItemContentItem{
 		Content: msg,
 		Type:    "text",
 	}
-	userMessage.Contents = append(userMessage.Contents, newUserItem)
+	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
+
+	// add files
+	for _, o := range opts {
+		if o.Files != nil {
+			for _, f := range o.Files {
+				if f != nil {
+					data, err := io.ReadAll(f)
+					if err != nil {
+						return "", conversation, err
+					}
+
+					mimeType := http.DetectContentType(data)
+
+					if strings.HasPrefix(mimeType, "image/") {
+						dataURI, err := c.AsSupportedImageFormatString(data)
+						if err != nil {
+							return "", conversation, err
+						}
+
+						newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+							Content: dataURI,
+							Type:    "image",
+						}
+						userMessage.Contents = append(userMessage.Contents, newUserImageItem)
+					} else {
+						return "", conversation, fmt.Errorf("mime type '%v' not supported", mimeType)
+					}
+				}
+			}
+		}
+	}
 
 	messages := []OpenAIChatMessage{}
 	appendConversationItem := func(item *ConversationRepositoryConversationItem) error {
 		if item.Contents != nil {
+			newMessage := &OpenAIChatMessage{
+				Content: make(OpenAIChatMessageContent, 0),
+				Role:    item.Role,
+			}
+
 			for _, content := range item.Contents {
-				var newMessage *OpenAIChatMessage
+				var newItem interface{}
 
 				if content.Type == "text" {
-					newMessage = &OpenAIChatMessage{
-						Content: make(OpenAIChatMessageContent, 0),
-						Role:    item.Role,
-					}
-
-					newItem := &OpenAIChatMessageContentTextItem{
+					newItem = &OpenAIChatMessageContentTextItem{
 						Text: content.Content,
 						Type: "text",
 					}
-
-					newMessage.Content = append(newMessage.Content, newItem)
+				} else if content.Type == "image" {
+					newItem = &OpenAIChatMessageContentImageItem{
+						ImageUrl: OpenAIChatMessageContentImageItemUrl{
+							Url: content.Content,
+						},
+						Type: "image_url",
+					}
 				}
 
-				if newMessage != nil {
-					messages = append(messages, *newMessage)
+				if newItem != nil {
+					newMessage.Content = append(newMessage.Content, newItem)
 				} else {
 					return fmt.Errorf("content type '%v' not allowed", content.Type)
 				}
 			}
+
+			messages = append(messages, *newMessage)
 		}
 
 		return nil
@@ -157,7 +209,13 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string) (string, ConversationR
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
+		// load the response
+		responseData, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", conversation, err
+		}
+
+		return "", conversation, fmt.Errorf("unexpected response %v (%v)", resp.StatusCode, string(responseData))
 	}
 
 	responseTime := app.GetISOTime()

@@ -24,6 +24,7 @@ package commands
 
 import (
 	"errors"
+	"io"
 	"os"
 	"strings"
 
@@ -42,6 +43,9 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		Short:   "AI chat",
 		Long:    `Asks the AI a question.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			files, err := app.GetFiles()
+			app.CheckIfError(err)
+
 			message := strings.TrimSpace(
 				strings.Join(args, " "),
 			)
@@ -56,7 +60,20 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				chat.ResetConversation()
 			}
 
-			answer, _, err := app.AI.Chat(chat, message)
+			options := make([]types.AIClientChatOptions, 0)
+
+			for _, f := range files {
+				file, err := os.Open(f)
+				app.CheckIfError(err)
+
+				defer file.Close()
+
+				options = append(options, types.AIClientChatOptions{
+					Files: []io.Reader{file},
+				})
+			}
+
+			answer, _, err := app.AI.Chat(chat, message, options...)
 			app.CheckIfError(err)
 
 			if term.IsTerminal(int(os.Stdout.Fd())) {

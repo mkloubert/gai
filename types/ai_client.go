@@ -22,14 +22,25 @@
 
 package types
 
+import "io"
+
 // AIClient describes a client for an AI provider.
 type AIClient interface {
+	// AsSupportedImageFormatString reads data as image and tries to convert
+	// it to a supported data format as data URI.
+	AsSupportedImageFormatString(b []byte) (string, error)
 	// Chat starts or continues a chat conversation with message in `msg` based on `ctx` and returns the new conversation.
-	Chat(ctx *ChatContext, msg string) (string, ConversationRepositoryConversation, error)
+	Chat(ctx *ChatContext, msg string, opts ...AIClientChatOptions) (string, ConversationRepositoryConversation, error)
 	// ChatModel returns the current chat model.
 	ChatModel() string
 	// Provider returns the name of the provider.
 	Provider() string
 	// SetChatModel sets the current chat model.
 	SetChatModel(m string) error
+}
+
+// AIClientChatOptions stores additional options for `Chat` method.
+type AIClientChatOptions struct {
+	// Files stores list of one or more file to use for the submission.
+	Files []io.Reader
 }

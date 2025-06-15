@@ -27,6 +27,8 @@ package types
 type OllamaAIChatMessage struct {
 	// Content stores the message content.
 	Content string `json:"content,omitempty"`
+	// Images stores URL of images to submit.
+	Images []string `json:"images,omitempty"`
 	// Role stores the role.
 	Role string `json:"role,omitempty"`
 }
