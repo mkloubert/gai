@@ -46,6 +46,9 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
+			responseSchema, responseSchemaName, err := app.GetResponseSchema()
+			app.CheckIfError(err)
+
 			message, err := app.GetInput(args)
 			app.CheckIfError(err)
 
@@ -63,6 +66,11 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 			options := make([]types.AIClientChatOptions, 0)
 
+			options = append(options, types.AIClientChatOptions{
+				ResponseSchema:     responseSchema,
+				ResponseSchemaName: &responseSchemaName,
+			})
+
 			for _, f := range files {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
@@ -70,7 +78,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				defer file.Close()
 
 				options = append(options, types.AIClientChatOptions{
-					Files: []io.Reader{file},
+					Files: &[]io.Reader{file},
 				})
 			}
 
@@ -92,6 +100,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	}
 
 	app.WithEditorCLIFlags(chatCmd)
+	app.WithSchemaFlags(chatCmd)
 	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
 
 	parentCmd.AddCommand(

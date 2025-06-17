@@ -1,0 +1,10 @@
+{
+  "type": "object",
+  "required": ["your_answer"],
+  "properties": {
+    "your_answer": {
+      "type": "string",
+      "description": "Your answer of the user's input."
+    }
+  }
+}

@@ -74,7 +74,7 @@ type OpenAIChatMessage struct {
 type OpenAIChatMessageContent = []OpenAIChatMessageContentItem
 
 // OpenAIChatMessageContentItem is an item inside an `OpenAIChatMessageContent`.
-type OpenAIChatMessageContentItem = interface{}
+type OpenAIChatMessageContentItem = any
 
 // OpenAIChatMessageContentImageItem represents an `OpenAIChatMessageContentItem` of type `text`.
 type OpenAIChatMessageContentImageItem struct {

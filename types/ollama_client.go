@@ -141,6 +141,13 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		baseUrl = "http://localhost:11434" // use default
 	}
 
+	var schema *map[string]any
+	for _, o := range opts {
+		if o.ResponseSchema != nil {
+			schema = o.ResponseSchema
+		}
+	}
+
 	url := fmt.Sprintf("%v/api/chat", baseUrl)
 
 	userMessage := &ConversationRepositoryConversationItem{
@@ -154,9 +161,19 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 	}
 	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
+	// add response format
+	responseFormat, err := c.writeResponseFormatTo(userMessage, schema)
+	if err != nil {
+		return "", conversation, err
+	}
+
 	// add files
 	for _, o := range opts {
-		err := c.appendFilesTo(userMessage, o.Files)
+		if o.Files == nil {
+			continue
+		}
+
+		err := c.appendFilesTo(userMessage, *o.Files)
 		if err != nil {
 			return "", conversation, err
 		}
@@ -182,13 +199,14 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	messages = m
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"model":    c.chatModel,
 		"messages": messages,
 		"stream":   false,
-		"options": map[string]interface{}{
+		"options": map[string]any{
 			"temperature": temperature,
 		},
+		"format": responseFormat,
 	}
 
 	jsonData, err := json.Marshal(&body)
@@ -288,6 +306,13 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		baseUrl = "http://localhost:11434" // use default
 	}
 
+	var schema *map[string]any
+	for _, o := range opts {
+		if o.ResponseSchema != nil {
+			schema = o.ResponseSchema
+		}
+	}
+
 	url := fmt.Sprintf("%v/api/generate", baseUrl)
 
 	userMessage := &ConversationRepositoryConversationItem{
@@ -301,9 +326,19 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
+	// add response format
+	responseFormat, err := c.writeResponseFormatTo(userMessage, schema)
+	if err != nil {
+		return promptResponse, err
+	}
+
 	// add files
 	for _, o := range opts {
-		err := c.appendFilesTo(userMessage, o.Files)
+		if o.Files == nil {
+			continue
+		}
+
+		err := c.appendFilesTo(userMessage, *o.Files)
 		if err != nil {
 			return promptResponse, err
 		}
@@ -331,12 +366,13 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		}
 	}
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"model":       model,
 		"prompt":      userMessage.Contents[0].Content,
 		"stream":      false,
 		"temperature": temperature,
 		"images":      images,
+		"format":      responseFormat,
 	}
 
 	jsonData, err := json.Marshal(&body)
@@ -393,4 +429,22 @@ func (c *OllamaClient) Provider() string {
 func (c *OllamaClient) SetChatModel(m string) error {
 	c.chatModel = m
 	return nil
+}
+
+func (c *OllamaClient) toResponseFormat(schema *map[string]any) *map[string]any {
+	return schema
+}
+
+func (c *OllamaClient) writeResponseFormatTo(item *ConversationRepositoryConversationItem, schema *map[string]any) (*map[string]any, error) {
+	responseFormat := c.toResponseFormat(schema)
+	if responseFormat != nil {
+		jsonData, err := json.Marshal(responseFormat)
+		if err != nil {
+			return responseFormat, err
+		}
+
+		item.ResponseFormat = string(jsonData)
+	}
+
+	return responseFormat, nil
 }

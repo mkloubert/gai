@@ -23,8 +23,12 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -62,6 +66,45 @@ func (app *AppContext) GetMaxTokens() (*int64, error) {
 		return &maxTokens, nil
 	}
 	return nil, nil // let AI decide to use what default
+}
+
+// GetResponseSchema loads the data for response format with schema and name.
+func (app *AppContext) GetResponseSchema() (*map[string]any, string, error) {
+	var schema *map[string]any
+	schemaName := ""
+
+	schemaFile := strings.TrimSpace(app.SchemaFile)
+	if schemaFile != "" {
+		if !filepath.IsAbs(schemaFile) {
+			schemaFile = filepath.Join(app.WorkingDirectory, schemaFile)
+		}
+
+		schemaName = strings.TrimSpace(app.SchemaName)
+		if schemaName == "" {
+			schemaName = "GaiResponseSchema"
+		}
+
+		file, err := os.Open(schemaFile)
+		if err != nil {
+			return schema, schemaName, err
+		}
+		defer file.Close()
+
+		data, err := io.ReadAll(file)
+		if err != nil {
+			return schema, schemaName, err
+		}
+
+		var temp map[string]any
+		err = json.Unmarshal(data, &temp)
+		if err != nil {
+			return schema, schemaName, err
+		}
+
+		schema = &temp
+	}
+
+	return schema, schemaName, nil
 }
 
 // GetTemperature returns the temperature value for AI operations.

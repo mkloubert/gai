@@ -38,6 +38,8 @@ type ConversationRepositoryConversationItem struct {
 	Contents ConversationRepositoryConversationItemContents `yaml:"contents"`
 	// Model stores the model that is/has been used.
 	Model string `yaml:"model"`
+	// ResponseFormat stores the response format.
+	ResponseFormat string
 	// Role stores the role like `assistant`, `system` or `user`
 	Role string `yaml:"role"`
 	// Time stores timestamp in ISO 8601 format.

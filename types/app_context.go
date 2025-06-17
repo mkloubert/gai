@@ -65,6 +65,10 @@ type AppContext struct {
 	OpenEditor bool
 	// RootCommand stores the root command.
 	RootCommand *cobra.Command
+	// SchemaFile stores the path to the file with the response format/schema.
+	SchemaFile string
+	// SchemaFile stores the name of the response format/schema.
+	SchemaName string
 	// SkipDefaultEnvFiles indicates not to use default .env files, if `true`.
 	SkipDefaultEnvFiles bool
 	// Stderr stores the stream for error outputs.

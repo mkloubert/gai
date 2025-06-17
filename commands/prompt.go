@@ -44,6 +44,9 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
+			responseSchema, responseSchemaName, err := app.GetResponseSchema()
+			app.CheckIfError(err)
+
 			prompt, err := app.GetInput(args)
 			app.CheckIfError(err)
 
@@ -54,6 +57,11 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 			options := make([]types.AIClientPromptOptions, 0)
 
+			options = append(options, types.AIClientPromptOptions{
+				ResponseSchema:     responseSchema,
+				ResponseSchemaName: &responseSchemaName,
+			})
+
 			for _, f := range files {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
@@ -61,7 +69,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				defer file.Close()
 
 				options = append(options, types.AIClientPromptOptions{
-					Files: []io.Reader{file},
+					Files: &[]io.Reader{file},
 				})
 			}
 
@@ -80,6 +88,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	}
 
 	app.WithEditorCLIFlags(promptCmd)
+	app.WithSchemaFlags(promptCmd)
 
 	parentCmd.AddCommand(
 		promptCmd,

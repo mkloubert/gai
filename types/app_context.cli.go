@@ -31,3 +31,11 @@ func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 	// --editor=<COMMAND>
 	cmd.Flags().StringVarP(&app.Editor, "editor", "", "", "custom editor command")
 }
+
+// WithFormatFlags sets up `cmd` for (response) format based CLI flags.
+func (app *AppContext) WithSchemaFlags(cmd *cobra.Command) {
+	// --schema
+	cmd.Flags().StringVarP(&app.SchemaFile, "schema", "", "", "file with response format/schema")
+	// --schema-name
+	cmd.Flags().StringVarP(&app.SchemaName, "schema-name", "", "", "name of the response format/schema")
+}

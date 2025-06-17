@@ -50,7 +50,7 @@ func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, it
 		}
 
 		for _, content := range item.Contents {
-			var newItem interface{}
+			var newItem any
 
 			if content.Type == "text" {
 				newItem = &OpenAIChatMessageContentTextItem{
@@ -217,6 +217,17 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		baseUrl = "https://api.openai.com" // use default
 	}
 
+	var schema *map[string]any
+	schemaName := ""
+	for _, o := range opts {
+		if o.ResponseSchema != nil {
+			schema = o.ResponseSchema
+		}
+		if o.ResponseSchemaName != nil {
+			schemaName = *o.ResponseSchemaName
+		}
+	}
+
 	url := fmt.Sprintf("%v/v1/chat/completions", baseUrl)
 
 	userMessage := &ConversationRepositoryConversationItem{
@@ -230,9 +241,19 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 	}
 	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
+	// add response format
+	responseFormat, err := c.writeResponseFormatTo(userMessage, schema, schemaName)
+	if err != nil {
+		return "", conversation, err
+	}
+
 	// add files
 	for _, o := range opts {
-		err := c.appendFilesTo(userMessage, o.Files)
+		if o.Files == nil {
+			continue
+		}
+
+		err := c.appendFilesTo(userMessage, *o.Files)
 		if err != nil {
 			return "", conversation, err
 		}
@@ -258,12 +279,13 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	messages = m
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"model":                 model,
 		"messages":              messages,
 		"stream":                false,
 		"temperature":           temperature,
 		"max_completion_tokens": maxTokens,
+		"response_format":       responseFormat,
 	}
 
 	jsonData, err := json.Marshal(&body)
@@ -377,6 +399,17 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		baseUrl = "https://api.openai.com" // use default
 	}
 
+	var schema *map[string]any
+	schemaName := ""
+	for _, o := range opts {
+		if o.ResponseSchema != nil {
+			schema = o.ResponseSchema
+		}
+		if o.ResponseSchemaName != nil {
+			schemaName = *o.ResponseSchemaName
+		}
+	}
+
 	url := fmt.Sprintf("%v/v1/chat/completions", baseUrl)
 
 	userMessage := &ConversationRepositoryConversationItem{
@@ -390,9 +423,19 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 	userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
+	// add response format
+	responseFormat, err := c.writeResponseFormatTo(userMessage, schema, schemaName)
+	if err != nil {
+		return promptResponse, err
+	}
+
 	// add files
 	for _, o := range opts {
-		err := c.appendFilesTo(userMessage, o.Files)
+		if o.Files == nil {
+			continue
+		}
+
+		err := c.appendFilesTo(userMessage, *o.Files)
 		if err != nil {
 			return promptResponse, err
 		}
@@ -408,12 +451,13 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 
 	messages = m
 
-	body := map[string]interface{}{
+	body := map[string]any{
 		"model":                 model,
 		"messages":              messages,
 		"stream":                false,
 		"temperature":           temperature,
 		"max_completion_tokens": maxTokens,
+		"response_format":       responseFormat,
 	}
 
 	jsonData, err := json.Marshal(&body)
@@ -474,4 +518,32 @@ func (c *OpenAIClient) Provider() string {
 func (c *OpenAIClient) SetChatModel(m string) error {
 	c.chatModel = m
 	return nil
+}
+
+func (c *OpenAIClient) toResponseFormat(schema *map[string]any, schemaName string) *map[string]any {
+	if schema == nil {
+		return nil
+	}
+
+	return &map[string]any{
+		"type": "json_schema",
+		"json_schema": map[string]any{
+			"name":   schemaName,
+			"schema": schema,
+		},
+	}
+}
+
+func (c *OpenAIClient) writeResponseFormatTo(item *ConversationRepositoryConversationItem, schema *map[string]any, schemaName string) (*map[string]any, error) {
+	responseFormat := c.toResponseFormat(schema, schemaName)
+	if responseFormat != nil {
+		jsonData, err := json.Marshal(responseFormat)
+		if err != nil {
+			return responseFormat, err
+		}
+
+		item.ResponseFormat = string(jsonData)
+	}
+
+	return responseFormat, nil
 }

@@ -47,13 +47,21 @@ type AIClient interface {
 // AIClientChatOptions stores additional options for `Chat` method.
 type AIClientChatOptions struct {
 	// Files stores list of one or more file to use for the submission.
-	Files []io.Reader
+	Files *[]io.Reader
+	// ResponseSchema stores the response format.
+	ResponseSchema *map[string]any
+	// ResponseSchemaName stores the response name.
+	ResponseSchemaName *string
 }
 
 // AIClientPromptOptions stores additional options for `Prompt` method.
 type AIClientPromptOptions struct {
 	// Files stores list of one or more file to use for the submission.
-	Files []io.Reader
+	Files *[]io.Reader
+	// ResponseSchema stores the response format.
+	ResponseSchema *map[string]any
+	// ResponseSchemaName stores the response name.
+	ResponseSchemaName *string
 }
 
 // AIClientPromptResponse stores information about a successful prompt response.
