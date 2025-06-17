@@ -23,7 +23,13 @@
 package types
 
 import (
+	"bufio"
+	"errors"
 	"fmt"
+	"os"
+	"os/exec"
+	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
@@ -32,7 +38,7 @@ func (app *AppContext) getBestChromaFormatterName() string {
 	terminalFormatter := strings.TrimSpace(app.TerminalFormatter)
 	if terminalFormatter == "" {
 		terminalFormatter = strings.TrimSpace(
-			app.Getenv("GAI_TERMINAL_FORMATTER"),
+			app.GetEnv("GAI_TERMINAL_FORMATTER"),
 		)
 	}
 
@@ -54,7 +60,7 @@ func (app *AppContext) getBestChromaStyleName() string {
 	terminalStyle := strings.TrimSpace(app.TerminalStyle)
 	if terminalStyle == "" {
 		terminalStyle = strings.TrimSpace(
-			app.Getenv("GAI_TERMINAL_STYLE"),
+			app.GetEnv("GAI_TERMINAL_STYLE"),
 		)
 	}
 
@@ -72,6 +78,150 @@ func (app *AppContext) GetChromaSettings() *ChromaSettings {
 		Formatter: app.getBestChromaFormatterName(),
 		Style:     app.getBestChromaStyleName(),
 	}
+}
+
+// GetInput retrieves user input from the command-line arguments, standard input, or an editor.
+func (app *AppContext) GetInput(args []string) (string, error) {
+	stderr := app.Stderr
+	stdin := app.Stdin
+	stdout := app.Stdout
+
+	GAI_INPUT_ORDER := app.GetEnv("GAI_INPUT_ORDER")
+
+	GAI_INPUT_SEPARATOR := app.GetEnvOrNil("GAI_INPUT_SEPARATOR")
+	if GAI_INPUT_SEPARATOR == nil {
+		defaultSep := " "
+
+		GAI_INPUT_SEPARATOR = &defaultSep
+	}
+
+	// first add arguments from CLI
+	var parts []string
+
+	// addPart function trims the white spaces and appends the non-empty strings to the parts slice
+	addPart := func(val string) {
+		val = strings.TrimSpace(val)
+		if val != "" {
+			parts = append(parts, val)
+		}
+	}
+
+	// add arguments passed in the command-line interface
+	readFromArgs := func() error {
+		addPart(strings.Join(args, " "))
+		return nil
+	}
+
+	// if `OpenEditor` is true, attempts to open the user's preferred text editor and waits for the user to input text.
+	readFromEditor := func() error {
+		if !app.OpenEditor {
+			return nil
+		}
+
+		// create a temporary file
+		tmpFile, err := os.CreateTemp("", "gai")
+		if err != nil {
+			return err
+		}
+
+		tmpFile.Close()
+
+		tmpFilePath, err := filepath.Abs(tmpFile.Name())
+		if err != nil {
+			return err
+		}
+
+		// get the command to open the editor
+		editorPath, editorArgs := app.TryGetBestOpenEditorCommand(tmpFilePath)
+		if editorPath == "" {
+			return errors.New("no matching editor found")
+		}
+
+		defer os.Remove(tmpFilePath)
+
+		// run the editor command
+		cmd := exec.Command(editorPath, editorArgs...)
+
+		cmd.Stdin = stdin
+		cmd.Stdout = stdout
+		cmd.Stderr = stderr
+		cmd.Dir = path.Dir(tmpFilePath)
+
+		cmd.Run()
+
+		// read the contents of the temporary file
+		tmpData, err := os.ReadFile(tmpFilePath)
+		if err != nil {
+			return err
+		}
+
+		addPart(string(tmpData))
+		return nil
+	}
+
+	var dataFromStdin *string
+	dataFromStdinChecked := false
+	readFromStdin := func() error {
+		if !dataFromStdinChecked {
+			dataFromStdinChecked = true
+
+			// check if standard input has been piped
+			stdinStat, _ := stdin.Stat()
+			if (stdinStat.Mode() & os.ModeCharDevice) == 0 {
+				scanner := bufio.NewScanner(stdin)
+
+				temp := ""
+				for scanner.Scan() {
+					temp += scanner.Text()
+				}
+
+				dataFromStdin = &temp
+			}
+		}
+
+		if dataFromStdin != nil {
+			addPart(*dataFromStdin)
+		}
+
+		return nil
+	}
+
+	// collect actions
+	inputActions := make([](func() error), 0)
+	for _, item := range strings.Split(GAI_INPUT_ORDER, ",") {
+		item = strings.TrimSpace(strings.ToLower(item))
+		if item == "" {
+			continue
+		}
+
+		switch item {
+		case "a", "args":
+			inputActions = append(inputActions, readFromArgs)
+		case "e", "editor":
+			inputActions = append(inputActions, readFromEditor)
+		case "in", "stdin":
+			inputActions = append(inputActions, readFromStdin)
+		default:
+			return "", fmt.Errorf("input order '%v' not supported", item)
+		}
+	}
+
+	if len(inputActions) == 0 {
+		// setup default
+		inputActions = append(inputActions, readFromArgs, readFromStdin, readFromEditor)
+	}
+
+	// invoke actions
+	for _, action := range inputActions {
+		err := action()
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return strings.TrimSpace(
+		strings.Join(parts, *GAI_INPUT_SEPARATOR),
+	), nil
 }
 
 // Write writes `b` to `Stdout`.

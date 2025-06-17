@@ -43,6 +43,8 @@ type AppContext struct {
 	BaseUrl string
 	// Context stores the name of the current context.
 	Context string
+	// Editor stores the command for the custom editor to use.
+	Editor string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
 	EnvFiles []string
 	// EnvFiles stores environment variables.
@@ -59,6 +61,8 @@ type AppContext struct {
 	MaxTokens int64
 	// Model is the default chat model to use.
 	Model string
+	// OpenEditor is `true` if editor should be opened.
+	OpenEditor bool
 	// RootCommand stores the root command.
 	RootCommand *cobra.Command
 	// SkipDefaultEnvFiles indicates not to use default .env files, if `true`.
@@ -126,13 +130,6 @@ func (app *AppContext) EnsureAppDir() (string, error) {
 	}
 }
 
-// GetAIMessage returns whole AI message.
-func (app *AppContext) GetAIMessage(args []string) (string, error) {
-	message := strings.Join(args, " ")
-
-	return message, nil
-}
-
 // GetCurrentContext returns the name of the current AI context.
 func (app *AppContext) GetCurrentContext() string {
 	context := strings.TrimSpace(app.Context)
@@ -140,7 +137,7 @@ func (app *AppContext) GetCurrentContext() string {
 		return context
 	}
 
-	return strings.TrimSpace(app.Getenv("GAI_CONTEXT"))
+	return strings.TrimSpace(app.GetEnv("GAI_CONTEXT"))
 }
 
 // GetFiles() returns the cleaned up and unsorted list of files as

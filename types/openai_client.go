@@ -31,6 +31,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/mkloubert/gai/utils"
 )
 
 // OllamaClient is an `AIClient` implementation for OpenAI.
@@ -287,8 +289,9 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return "", conversation, err
 	}
 
 	responseTime := app.GetISOTime()
@@ -434,8 +437,9 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return promptResponse, fmt.Errorf("unexpected response %v", resp.StatusCode)
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return promptResponse, err
 	}
 
 	// load the response

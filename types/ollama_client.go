@@ -30,6 +30,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/mkloubert/gai/utils"
 )
 
 // OllamaClient is an `AIClient` implementation for Ollama.
@@ -213,8 +215,9 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 
 	responseTime := app.GetISOTime()
 
-	if resp.StatusCode != 200 {
-		return "", conversation, fmt.Errorf("unexpected response %v", resp.StatusCode)
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return "", conversation, err
 	}
 
 	// load the response
@@ -356,8 +359,9 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
-		return promptResponse, fmt.Errorf("unexpected response: %v", resp.StatusCode)
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return promptResponse, err
 	}
 
 	// load the response

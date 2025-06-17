@@ -44,7 +44,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
-			prompt, err := app.GetAIMessage(args)
+			prompt, err := app.GetInput(args)
 			app.CheckIfError(err)
 
 			prompt = strings.TrimSpace(prompt)
@@ -78,6 +78,8 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			}
 		},
 	}
+
+	app.WithEditorCLIFlags(promptCmd)
 
 	parentCmd.AddCommand(
 		promptCmd,

@@ -47,7 +47,7 @@ func (app *AppContext) initHomeDir() {
 func (app *AppContext) initAI() {
 	if strings.TrimSpace(app.Model) == "" {
 		// now try env variable
-		app.Model = strings.TrimSpace(app.Getenv("GAI_DEFAULT_CHAT_MODEL"))
+		app.Model = strings.TrimSpace(app.GetEnv("GAI_DEFAULT_CHAT_MODEL"))
 	}
 
 	modelWithProvider := strings.TrimSpace(app.Model)

@@ -32,14 +32,24 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Getenv tries to return an environment variable
+// GetEnv tries to return an environment variable
 // and returns empty string if not found
-func (app *AppContext) Getenv(key string) string {
-	v, ok := app.EnvVars[key]
-	if ok {
-		return v
+func (app *AppContext) GetEnv(key string) string {
+	v := app.GetEnvOrNil(key)
+	if v != nil {
+		return *v
 	}
 	return ""
+}
+
+// GetEnvOrNil tries to return an environment variable
+// and returns nil if not found
+func (app *AppContext) GetEnvOrNil(key string) *string {
+	v, ok := app.EnvVars[key]
+	if ok {
+		return &v
+	}
+	return nil
 }
 
 func (app *AppContext) loadEnvFilesIfExist() {

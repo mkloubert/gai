@@ -46,7 +46,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
-			message, err := app.GetAIMessage(args)
+			message, err := app.GetInput(args)
 			app.CheckIfError(err)
 
 			message = strings.TrimSpace(message)
@@ -91,6 +91,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		},
 	}
 
+	app.WithEditorCLIFlags(chatCmd)
 	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
 
 	parentCmd.AddCommand(

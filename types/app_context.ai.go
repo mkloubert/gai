@@ -36,7 +36,7 @@ const initalOpenAIChatModel = "openai:gpt-4.1-mini"
 func (app *AppContext) GetBaseUrl() string {
 	baseUrl := strings.TrimSpace(app.BaseUrl)
 	if baseUrl == "" {
-		baseUrl = strings.TrimSpace(app.Getenv("GAI_BASE_URL"))
+		baseUrl = strings.TrimSpace(app.GetEnv("GAI_BASE_URL"))
 	}
 
 	return baseUrl
@@ -47,7 +47,7 @@ func (app *AppContext) GetMaxTokens() (*int64, error) {
 	maxTokens := app.MaxTokens
 
 	if maxTokens <= 0 {
-		GAI_MAX_TOKENS := strings.TrimSpace(app.Getenv("GAI_MAX_TOKENS"))
+		GAI_MAX_TOKENS := strings.TrimSpace(app.GetEnv("GAI_MAX_TOKENS"))
 		if GAI_MAX_TOKENS != "" {
 			num, err := strconv.ParseInt(GAI_MAX_TOKENS, 10, 64)
 			if err != nil {
@@ -71,7 +71,7 @@ func (app *AppContext) GetTemperature() (float64, error) {
 	}
 
 	GAI_TEMPERATURE := strings.TrimSpace(
-		app.Getenv("GAI_TEMPERATURE"),
+		app.GetEnv("GAI_TEMPERATURE"),
 	)
 	if GAI_TEMPERATURE != "" {
 		f64, err := strconv.ParseFloat(GAI_TEMPERATURE, 64)
@@ -132,7 +132,7 @@ func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
 		apiKey := strings.TrimSpace(app.ApiKey)
 		if apiKey == "" {
 			// now try env variable
-			apiKey = strings.TrimSpace(app.Getenv("OPENAI_API_KEY"))
+			apiKey = strings.TrimSpace(app.GetEnv("OPENAI_API_KEY"))
 		}
 		if apiKey == "" {
 			return nil, errors.New("no API defined")
