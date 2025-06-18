@@ -1,0 +1,12 @@
+{
+  "folders": [
+    {
+      "name": "CLI",
+      "path": "./go-gai"
+    },
+    {
+      "name": "(root)",
+      "path": "."
+    }
+  ]
+}
