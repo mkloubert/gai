@@ -107,6 +107,33 @@ func (app *AppContext) GetResponseSchema() (*map[string]any, string, error) {
 	return schema, schemaName, nil
 }
 
+// GetSystemPrompt returns the system prompt value for AI operations.
+func (app *AppContext) GetSystemPrompt(defaultPrompt string) string {
+	systemPrompt := strings.TrimSpace(app.SystemPrompt) // first try flag
+	if systemPrompt == "" {
+		systemPrompt = strings.TrimSpace(app.GetEnv("GAI_SYSTEM_PROMPT")) // now try env variable
+	}
+
+	if systemPrompt == "" {
+		return defaultPrompt
+	}
+	return systemPrompt
+}
+
+// GetSystemRole returns the name/ID of the system role for AI operations.
+func (app *AppContext) GetSystemRole() string {
+	systemRole := strings.TrimSpace(app.SystemRole) // first try flag
+	if systemRole == "" {
+		systemRole = strings.TrimSpace(app.GetEnv("GAI_SYSTEM_ROLE")) // now try env variable
+	}
+
+	if systemRole == "" {
+		systemRole = "system"
+	}
+
+	return systemRole
+}
+
 // GetTemperature returns the temperature value for AI operations.
 func (app *AppContext) GetTemperature() (float64, error) {
 	if app.Temperature >= 0 {

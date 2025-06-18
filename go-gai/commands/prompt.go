@@ -78,7 +78,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			response, err := app.AI.Prompt(prompt, options...)
 			app.CheckIfError(err)
 
-			if term.IsTerminal(int(os.Stdout.Fd())) {
+			if !app.NoHighlight && term.IsTerminal(int(os.Stdout.Fd())) {
 				chroma := app.GetChromaSettings()
 				chroma.HighlightMarkdown(response.Content)
 
@@ -90,6 +90,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	}
 
 	app.WithEditorCLIFlags(promptCmd)
+	app.WithHighlightFlags(promptCmd)
 	app.WithSchemaFlags(promptCmd)
 
 	parentCmd.AddCommand(

@@ -87,7 +87,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			answer, _, err := app.AI.Chat(chat, message, options...)
 			app.CheckIfError(err)
 
-			if term.IsTerminal(int(os.Stdout.Fd())) {
+			if !app.NoHighlight && term.IsTerminal(int(os.Stdout.Fd())) {
 				chroma := app.GetChromaSettings()
 				chroma.HighlightMarkdown(answer)
 
@@ -102,6 +102,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	}
 
 	app.WithEditorCLIFlags(chatCmd)
+	app.WithHighlightFlags(chatCmd)
 	app.WithSchemaFlags(chatCmd)
 	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
 

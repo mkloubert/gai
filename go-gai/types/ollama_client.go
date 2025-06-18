@@ -129,6 +129,8 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		return "", conversation, fmt.Errorf("no chat ai model defined")
 	}
 
+	conversation = c.setupSystemPromptIfNeeded(conversation, "", model)
+
 	app := ctx.App
 
 	temperature, err := app.GetTemperature()
@@ -292,6 +294,9 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		return promptResponse, fmt.Errorf("no chat ai model defined")
 	}
 
+	tempConversation := make(ConversationRepositoryConversation, 0)
+	tempConversation = c.setupSystemPromptIfNeeded(tempConversation, "", model)
+
 	promptResponse.Model = model
 
 	app := c.app
@@ -345,6 +350,14 @@ func (c *OllamaClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 
 	messages := []OllamaAIChatMessage{}
+	for _, item := range tempConversation {
+		m, err := c.appendConversationItemTo(messages, item)
+		if err != nil {
+			return promptResponse, err
+		}
+
+		messages = m
+	}
 
 	m, err := c.appendConversationItemTo(messages, userMessage)
 	if err != nil {
@@ -429,6 +442,37 @@ func (c *OllamaClient) Provider() string {
 func (c *OllamaClient) SetChatModel(m string) error {
 	c.chatModel = m
 	return nil
+}
+
+func (c *OllamaClient) setupSystemPromptIfNeeded(conversation ConversationRepositoryConversation, defaultPrompt string, model string) ConversationRepositoryConversation {
+	if len(conversation) == 0 {
+		// only if no conversation yet ...
+
+		app := c.app
+
+		systemPrompt := strings.TrimSpace(
+			app.GetSystemPrompt(defaultPrompt),
+		)
+		if systemPrompt != "" {
+			// ... system prompt is defined
+
+			systemMessage := &ConversationRepositoryConversationItem{
+				Contents: make(ConversationRepositoryConversationItemContents, 0),
+				Model:    model,
+				Role:     app.GetSystemRole(),
+				Time:     app.GetISOTime(),
+			}
+			newTextItem := &ConversationRepositoryConversationItemContentItem{
+				Content: systemPrompt,
+				Type:    "text",
+			}
+			systemMessage.Contents = append(systemMessage.Contents, newTextItem)
+
+			conversation = append(conversation, systemMessage)
+		}
+	}
+
+	return conversation
 }
 
 func (c *OllamaClient) toResponseFormat(schema *map[string]any) *map[string]any {

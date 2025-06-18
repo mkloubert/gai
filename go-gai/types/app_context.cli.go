@@ -32,6 +32,12 @@ func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&app.Editor, "editor", "", "", "custom editor command")
 }
 
+// WithFormatFlags sets up `cmd` for highlight based CLI flags.
+func (app *AppContext) WithHighlightFlags(cmd *cobra.Command) {
+	// --no-highlight
+	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "fo not highlight output")
+}
+
 // WithFormatFlags sets up `cmd` for (response) format based CLI flags.
 func (app *AppContext) WithSchemaFlags(cmd *cobra.Command) {
 	// --schema

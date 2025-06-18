@@ -67,6 +67,8 @@ type AppContext struct {
 	MaxTokens int64
 	// Model is the default chat model to use.
 	Model string
+	// NoHighlight is `true` if output should NOT be highlighted and formatted.
+	NoHighlight bool
 	// OpenEditor is `true` if editor should be opened.
 	OpenEditor bool
 	// RootCommand stores the root command.
@@ -83,6 +85,10 @@ type AppContext struct {
 	Stdin *os.File
 	// Stdout stores the stream for default outputs.
 	Stdout *os.File
+	// SystemPrompt stores the custom system prompt for AI operations.
+	SystemPrompt string
+	// SystemRole custom name of the system role.
+	SystemRole string
 	// Temperature stores the temperature for AI operations.
 	Temperature float64
 	// TerminalFormatter defines the custom terminal formatter.
@@ -156,18 +162,16 @@ func (app *AppContext) GetFiles() ([]string, error) {
 	files := make([]string, 0)
 
 	// first check for explicit file pathes
-	if app.Files != nil {
-		for _, f := range app.Files {
-			file := f
-			if !filepath.IsAbs(file) {
-				file = filepath.Join(app.WorkingDirectory, file)
-			}
-
-			files = append(files, file)
+	for _, f := range app.Files {
+		file := f
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(app.WorkingDirectory, file)
 		}
+
+		files = append(files, file)
 	}
 
-	// now the ones with patterns
+	// now the ones with patterns ...
 
 	globPatterns := make([]string, 0)
 	for _, fp := range app.FilePatterns {

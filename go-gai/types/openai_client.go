@@ -200,6 +200,8 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		return "", conversation, fmt.Errorf("no chat ai model defined")
 	}
 
+	conversation = c.setupSystemPromptIfNeeded(conversation, "", model)
+
 	app := ctx.App
 
 	maxTokens, err := app.GetMaxTokens()
@@ -380,6 +382,9 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		return promptResponse, fmt.Errorf("no chat ai model defined")
 	}
 
+	tempConversation := make(ConversationRepositoryConversation, 0)
+	tempConversation = c.setupSystemPromptIfNeeded(tempConversation, "", model)
+
 	promptResponse.Model = model
 
 	app := c.app
@@ -442,6 +447,14 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 	}
 
 	messages := []OpenAIChatMessage{}
+	for _, item := range tempConversation {
+		m, err := c.appendConversationItemTo(messages, item)
+		if err != nil {
+			return promptResponse, err
+		}
+
+		messages = m
+	}
 
 	// add user message
 	m, err := c.appendConversationItemTo(messages, userMessage)
@@ -518,6 +531,37 @@ func (c *OpenAIClient) Provider() string {
 func (c *OpenAIClient) SetChatModel(m string) error {
 	c.chatModel = m
 	return nil
+}
+
+func (c *OpenAIClient) setupSystemPromptIfNeeded(conversation ConversationRepositoryConversation, defaultPrompt string, model string) ConversationRepositoryConversation {
+	if len(conversation) == 0 {
+		// only if no conversation yet ...
+
+		app := c.app
+
+		systemPrompt := strings.TrimSpace(
+			app.GetSystemPrompt(defaultPrompt),
+		)
+		if systemPrompt != "" {
+			// ... system prompt is defined
+
+			systemMessage := &ConversationRepositoryConversationItem{
+				Contents: make(ConversationRepositoryConversationItemContents, 0),
+				Model:    model,
+				Role:     app.GetSystemRole(),
+				Time:     app.GetISOTime(),
+			}
+			newTextItem := &ConversationRepositoryConversationItemContentItem{
+				Content: systemPrompt,
+				Type:    "text",
+			}
+			systemMessage.Contents = append(systemMessage.Contents, newTextItem)
+
+			conversation = append(conversation, systemMessage)
+		}
+	}
+
+	return conversation
 }
 
 func (c *OpenAIClient) toResponseFormat(schema *map[string]any, schemaName string) *map[string]any {

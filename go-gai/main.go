@@ -71,6 +71,8 @@ func main() {
 	rootCmd.PersistentFlags().BoolVarP(&app.SkipDefaultEnvFiles, "skip-env-files", "", false, "do not load default .env files")
 	rootCmd.PersistentFlags().Int64VarP(&app.MaxTokens, "max-tokens", "", 0, "maximum number of tokens")
 	rootCmd.PersistentFlags().StringVarP(&app.Model, "model", "m", "", "default chat model")
+	rootCmd.PersistentFlags().StringVarP(&app.SystemPrompt, "system", "s", "", "custom system prompt")
+	rootCmd.PersistentFlags().StringVarP(&app.SystemRole, "system-role", "", "", "custom name/id of the system role")
 	rootCmd.PersistentFlags().Float64VarP(&app.Temperature, "temperature", "t", -1, "custom temperature value")
 	rootCmd.PersistentFlags().StringVarP(&app.TerminalFormatter, "terminal-formatter", "", "", "custom terminal formatter")
 	rootCmd.PersistentFlags().StringVarP(&app.TerminalStyle, "terminal-style", "", "", "custom terminal style")
