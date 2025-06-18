@@ -44,7 +44,8 @@ func (app *AppContext) initHomeDir() {
 	}
 }
 
-func (app *AppContext) initAI() {
+// InitAI initializes the default AI client.
+func (app *AppContext) InitAI() {
 	if strings.TrimSpace(app.Model) == "" {
 		// now try env variable
 		app.Model = strings.TrimSpace(app.GetEnv("GAI_DEFAULT_CHAT_MODEL"))
@@ -99,6 +100,4 @@ func (app *AppContext) Init() {
 	app.initWorkingDirectory()
 
 	app.loadEnvFilesIfExist()
-
-	app.initAI()
 }

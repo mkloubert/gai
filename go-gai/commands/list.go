@@ -123,6 +123,30 @@ func init_list_env_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	)
 }
 
+func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var listFilesCmd = &cobra.Command{
+		Use:   "files",
+		Short: "List files",
+		Long:  `Lists files as fined in --file and --files flags.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			files, err := app.GetFiles()
+			app.CheckIfError(err)
+
+			for i, f := range files {
+				if i > 0 {
+					app.Writeln()
+				}
+
+				app.WriteString(f)
+			}
+		},
+	}
+
+	parentCmd.AddCommand(
+		listFilesCmd,
+	)
+}
+
 // Init_list_Command initializes the `list` command.
 func Init_list_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	var listCmd = &cobra.Command{
@@ -137,6 +161,7 @@ func Init_list_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 	init_list_conversation_Command(app, listCmd)
 	init_list_env_Command(app, listCmd)
+	init_list_files_Command(app, listCmd)
 
 	parentCmd.AddCommand(
 		listCmd,

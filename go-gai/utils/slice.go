@@ -20,14 +20,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-package commands
+package utils
 
-import (
-	"github.com/mkloubert/gai/types"
-	"github.com/spf13/cobra"
-)
+// RemoveDuplicateStrings creates a new string slice with unique entries.
+func RemoveDuplicateStrings(input []string) []string {
+	seen := map[string]bool{}
 
-// RunRootCommand handles the root command and its settings and operations.
-func RunRootCommand(app *types.AppContext, cmd *cobra.Command, args []string) {
-	cmd.Help()
+	result := make([]string, 0)
+
+	for _, str := range input {
+		if !seen[str] {
+			seen[str] = true
+			result = append(result, str)
+		}
+	}
+
+	return result
 }

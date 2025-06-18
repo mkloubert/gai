@@ -24,12 +24,16 @@ package types
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
+	"github.com/mkloubert/gai/utils"
+	ignore "github.com/sabhiram/go-gitignore"
 	"github.com/spf13/cobra"
 )
 
@@ -51,6 +55,8 @@ type AppContext struct {
 	EnvVars map[string]string
 	// EnvFiles stores string representing new line.
 	EOL string
+	// FilePatterns stores list of additional files as glob patterns to use for the current operation.
+	FilePatterns []string
 	// Files stores list of additional files to use for the current operation.
 	Files []string
 	// HomeDirectory is the absolute path to the user's home directory.
@@ -149,6 +155,7 @@ func (app *AppContext) GetCurrentContext() string {
 func (app *AppContext) GetFiles() ([]string, error) {
 	files := make([]string, 0)
 
+	// first check for explicit file pathes
 	if app.Files != nil {
 		for _, f := range app.Files {
 			file := f
@@ -159,6 +166,54 @@ func (app *AppContext) GetFiles() ([]string, error) {
 			files = append(files, file)
 		}
 	}
+
+	// now the ones with patterns
+
+	globPatterns := make([]string, 0)
+	for _, fp := range app.FilePatterns {
+		if strings.TrimSpace(fp) != "" {
+			globPatterns = append(globPatterns, fp)
+		}
+	}
+	globPatterns = utils.RemoveDuplicateStrings(globPatterns)
+
+	if len(globPatterns) > 0 {
+		gitignore := ignore.CompileIgnoreLines(globPatterns...)
+
+		err := filepath.WalkDir(app.WorkingDirectory, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+
+			if !d.IsDir() {
+				relPath, err := filepath.Rel(app.WorkingDirectory, path)
+				if err != nil {
+					return err
+				}
+
+				if gitignore.MatchesPath(relPath) {
+					files = append(files, path)
+				}
+			}
+
+			return nil
+		})
+
+		if err != nil {
+			return files, err
+		}
+	}
+
+	// remove duplicates ...
+	files = utils.RemoveDuplicateStrings(files)
+
+	// ... and sort case-insensitive
+	sort.Slice(files, func(i, j int) bool {
+		strI := strings.TrimSpace(strings.ToLower(files[i]))
+		strJ := strings.TrimSpace(strings.ToLower(files[j]))
+
+		return strI < strJ
+	})
 
 	return files, nil
 }

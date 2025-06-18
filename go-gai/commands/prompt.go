@@ -41,6 +41,8 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		Short:   "AI prompt",
 		Long:    `Sends a prompt to AI.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			app.InitAI()
+
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 

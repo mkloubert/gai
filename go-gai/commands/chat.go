@@ -43,6 +43,8 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		Short:   "AI chat",
 		Long:    `Asks the AI a question.`,
 		Run: func(cmd *cobra.Command, args []string) {
+			app.InitAI()
+
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
 
