@@ -50,18 +50,27 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/mkloubert/gai/types"
 	"github.com/spf13/cobra"
 )
 
-func init_analize_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
-	var analizeCodeCmd = &cobra.Command{
+type updateCodeResponse struct {
+	UpdatedFiles map[string]updateCodeResponseFileToUpdateToUpdate `json:"updated_files"`
+}
+
+type updateCodeResponseFileToUpdateToUpdate struct {
+	NewContent string `json:"new_content"`
+}
+
+func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var updateCodeCmd = &cobra.Command{
 		Use:     "code",
 		Aliases: []string{"c"},
-		Short:   "Analize code",
-		Long:    `Analize source code as defined in --file and --files flags.`,
+		Short:   "Update code",
+		Long:    `Updates source code as defined in --file and --files flags.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			startTime := app.GetISOTime()
 
@@ -143,6 +152,8 @@ Answer with 'OK' if you understand this.`
 				addPseudoMessage(userContent)
 			}
 
+			filesToUpdate := make([]string, 0)
+
 			// start creating a pseudo conversation
 			for i, f := range files {
 				relPath, err := filepath.Rel(app.WorkingDirectory, f)
@@ -173,6 +184,8 @@ Answer with 'OK' if you analyzed it%v.`,
 
 					addPseudoMessage(userContent)
 				}
+
+				filesToUpdate = append(filesToUpdate, relPath)
 			}
 
 			// setup final message and instructions
@@ -209,14 +222,46 @@ Your answer:`,
 				chat.UpdateConversationWith(conversation, updateConversationWithOptions...)
 			}
 
-			// now do the chat and output anything ...
+			if responseSchema == nil {
+				// build default schema
 
-			systemPrompt := `You are a helpful, thorough, and articulate assistant helping a user analyze source code.
-Always respond with detailed explanations, clear structure, and relevant examples.
-Break down complex topics step by step.
-When appropriate, use bullet points, headings, or code snippets to enhance clarity.
-The user will start by submitting each file with its contents as serialized JSON strings.  
-After this, the user will submit their question or query, and you will follow it exactly and answer in the same language.`
+				required1 := make([]string, 0)
+				properties1 := map[string]any{}
+
+				for _, f := range filesToUpdate {
+					required1 = append(required1, f)
+
+					properties1[f] = map[string]any{
+						"description": fmt.Sprintf("Information how the file '%v' should be updated.", f),
+						"type":        "object",
+						"required":    []string{"new_content"},
+						"properties": map[string]any{
+							"new_content": map[string]any{
+								"type":        "string",
+								"description": fmt.Sprintf("New content for file '%s'.", f),
+							},
+						},
+					}
+				}
+
+				responseSchema = &map[string]any{
+					"type":     "object",
+					"required": []string{"updated_files"},
+					"properties": map[string]any{
+						"updated_files": map[string]any{
+							"type":        "object",
+							"description": "List of files that should be updated.",
+							"required":    required1,
+							"properties":  properties1,
+						},
+					},
+				}
+			}
+			if strings.TrimSpace(responseSchemaName) == "" {
+				responseSchemaName = "FileUpdateSchema"
+			}
+
+			systemPrompt := ``
 
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{
@@ -228,30 +273,47 @@ After this, the user will submit their question or query, and you will follow it
 			answer, _, err := app.AI.Chat(chat, message, chatOptions...)
 			app.CheckIfError(err)
 
-			app.OutputAIAnswer(answer)
+			var updateResponse updateCodeResponse
+			err = json.Unmarshal([]byte(answer), &updateResponse)
+			app.CheckIfError(err)
+
+			for fileName, fileItem := range updateResponse.UpdatedFiles {
+				if !slices.Contains(filesToUpdate, fileName) {
+					app.CheckIfError(fmt.Errorf("%s is an unknown file that cannot be updated", fileName))
+				}
+
+				fullPath := filepath.Join(app.WorkingDirectory, fileName)
+
+				stat, err := os.Stat(fullPath)
+				app.CheckIfError(err)
+
+				os.WriteFile(fullPath, []byte(fileItem.NewContent), stat.Mode().Perm())
+
+				app.Writeln(fmt.Sprintf("Wrote new content to '%s'", fileName))
+			}
 		},
 	}
 
-	app.WithChatFlags(analizeCodeCmd)
+	app.WithChatFlags(updateCodeCmd)
 
 	parentCmd.AddCommand(
-		analizeCodeCmd,
+		updateCodeCmd,
 	)
 }
 
-// Init_analize_Command initializes the `analize` command.
-func Init_analize_Command(app *types.AppContext, parentCmd *cobra.Command) {
+// Init_update_Command initializes the `update` command.
+func Init_update_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	var listCmd = &cobra.Command{
-		Use:     "analize [resource]",
-		Aliases: []string{"a"},
-		Short:   "Analize",
-		Long:    `Analizes a resource.`,
+		Use:     "update [resource]",
+		Aliases: []string{"u"},
+		Short:   "Update",
+		Long:    `Updates a resource.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			cmd.Help()
 		},
 	}
 
-	init_analize_code_Command(app, listCmd)
+	init_update_code_Command(app, listCmd)
 
 	parentCmd.AddCommand(
 		listCmd,
