@@ -48,10 +48,14 @@ type AIClient interface {
 type AIClientChatOptions struct {
 	// Files stores list of one or more file to use for the submission.
 	Files *[]io.Reader
+	// `true` if new conversation should not be saved.
+	NoSave *bool
 	// ResponseSchema stores the response format.
 	ResponseSchema *map[string]any
 	// ResponseSchemaName stores the response name.
 	ResponseSchemaName *string
+	// SystemPrompt stores the default system prompt.
+	SystemPrompt *string
 }
 
 // AIClientPromptOptions stores additional options for `Prompt` method.
@@ -62,6 +66,8 @@ type AIClientPromptOptions struct {
 	ResponseSchema *map[string]any
 	// ResponseSchemaName stores the response name.
 	ResponseSchemaName *string
+	// SystemPrompt stores the default system prompt.
+	SystemPrompt *string
 }
 
 // AIClientPromptResponse stores information about a successful prompt response.

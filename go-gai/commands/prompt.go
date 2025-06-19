@@ -30,7 +30,6 @@ import (
 
 	"github.com/mkloubert/gai/types"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 // Init_prompt_Command initializes the `prompt` command.
@@ -78,20 +77,11 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			response, err := app.AI.Prompt(prompt, options...)
 			app.CheckIfError(err)
 
-			if !app.NoHighlight && term.IsTerminal(int(os.Stdout.Fd())) {
-				chroma := app.GetChromaSettings()
-				chroma.HighlightMarkdown(response.Content)
-
-				app.Writeln()
-			} else {
-				app.WriteString(response.Content)
-			}
+			app.OutputAIAnswer(response.Content)
 		},
 	}
 
-	app.WithEditorCLIFlags(promptCmd)
-	app.WithHighlightFlags(promptCmd)
-	app.WithSchemaFlags(promptCmd)
+	app.WithPromptFlags(promptCmd)
 
 	parentCmd.AddCommand(
 		promptCmd,

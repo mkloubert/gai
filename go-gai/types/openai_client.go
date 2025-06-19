@@ -200,7 +200,18 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		return "", conversation, fmt.Errorf("no chat ai model defined")
 	}
 
-	conversation = c.setupSystemPromptIfNeeded(conversation, "", model)
+	noSave := false
+	systemPrompt := ""
+	for _, o := range opts {
+		if o.NoSave != nil {
+			noSave = *o.NoSave
+		}
+		if o.SystemPrompt != nil {
+			systemPrompt = *o.SystemPrompt
+		}
+	}
+
+	conversation = c.setupSystemPromptIfNeeded(conversation, systemPrompt, model)
 
 	app := ctx.App
 
@@ -355,7 +366,12 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 		conversation = append(conversation, assistantMessage)
 	}
 
-	ctx.UpdateConversationWith(conversation)
+	if !noSave {
+		err := ctx.UpdateConversationWith(conversation)
+		if err != nil {
+			return answer, conversation, err
+		}
+	}
 
 	return answer, conversation, nil
 }
@@ -382,8 +398,15 @@ func (c *OpenAIClient) Prompt(msg string, opts ...AIClientPromptOptions) (AIClie
 		return promptResponse, fmt.Errorf("no chat ai model defined")
 	}
 
+	systemPrompt := ""
+	for _, o := range opts {
+		if o.SystemPrompt != nil {
+			systemPrompt = *o.SystemPrompt
+		}
+	}
+
 	tempConversation := make(ConversationRepositoryConversation, 0)
-	tempConversation = c.setupSystemPromptIfNeeded(tempConversation, "", model)
+	tempConversation = c.setupSystemPromptIfNeeded(tempConversation, systemPrompt, model)
 
 	promptResponse.Model = model
 

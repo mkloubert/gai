@@ -41,6 +41,12 @@ type ChatContext struct {
 	currentContext string
 }
 
+// UpdateConversationWith stores options for `UpdateConversationWith` method.
+type UpdateConversationWithOptions struct {
+	// NoSave is `true` if conversion file should not be updated.
+	NoSave *bool
+}
+
 func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversationContext {
 	var app = ctx.App
 	var cwd = app.WorkingDirectory
@@ -191,9 +197,19 @@ func (ctx *ChatContext) UpdateConversation() error {
 }
 
 // UpdateConversationWith updates the conversation file with all conversations.
-func (ctx *ChatContext) UpdateConversationWith(conversation ConversationRepositoryConversation) error {
+func (ctx *ChatContext) UpdateConversationWith(conversation ConversationRepositoryConversation, opts ...UpdateConversationWithOptions) error {
+	noSave := false
+	for _, o := range opts {
+		if o.NoSave != nil {
+			noSave = *o.NoSave
+		}
+	}
+
 	conversationContext := ctx.ensureConversation()
 	conversationContext.Conversation = conversation
 
+	if noSave {
+		return nil
+	}
 	return ctx.UpdateConversation()
 }

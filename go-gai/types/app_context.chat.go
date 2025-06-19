@@ -22,15 +22,33 @@
 
 package types
 
+// NewChatContextOptions stores options for `NewChatContext` method.
+type NewChatContextOptions struct {
+	// StartEmpty is `true`, if context should start empty
+	StartEmpty *bool
+}
+
 // NewChatContext creates a new `ChatContext` instance based on this app.
-func (app *AppContext) NewChatContext() (*ChatContext, error) {
+func (app *AppContext) NewChatContext(opts ...NewChatContextOptions) (*ChatContext, error) {
+	startEmpty := false
+	for _, o := range opts {
+		if o.StartEmpty != nil {
+			startEmpty = *o.StartEmpty
+		}
+	}
+
 	chat := &ChatContext{
 		App: app,
 	}
 
 	chat.SwitchContext(app.Context)
 
-	err := chat.ReloadAllConversations()
+	if !startEmpty {
+		err := chat.ReloadAllConversations()
+		if err != nil {
+			return chat, err
+		}
+	}
 
-	return chat, err
+	return chat, nil
 }

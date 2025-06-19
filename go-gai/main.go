@@ -78,6 +78,7 @@ func main() {
 	rootCmd.PersistentFlags().StringVarP(&app.TerminalStyle, "terminal-style", "", "", "custom terminal style")
 	rootCmd.PersistentFlags().BoolVarP(&app.Verbose, "verbose", "", false, "verbose output")
 
+	commands.Init_analize_Command(app, rootCmd)
 	commands.Init_chat_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
 	commands.Init_prompt_Command(app, rootCmd)

@@ -46,6 +46,7 @@ package commands
 
 import (
 	"fmt"
+	"path/filepath"
 	"sort"
 
 	"github.com/joho/godotenv"
@@ -124,10 +125,12 @@ func init_list_env_Command(app *types.AppContext, parentCmd *cobra.Command) {
 }
 
 func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var fullPath bool
+
 	var listFilesCmd = &cobra.Command{
 		Use:   "files",
 		Short: "List files",
-		Long:  `Lists files as fined in --file and --files flags.`,
+		Long:  `Lists files as defined in --file and --files flags.`,
 		Run: func(cmd *cobra.Command, args []string) {
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
@@ -137,10 +140,22 @@ func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
 					app.Writeln()
 				}
 
-				app.WriteString(f)
+				if fullPath {
+					app.WriteString(f)
+				} else {
+					relPath, err := filepath.Rel(app.WorkingDirectory, f)
+					if err != nil {
+						app.Writeln(fmt.Sprintf("WARN: %s", err.Error()))
+						app.WriteString(f)
+					} else {
+						app.WriteString(relPath)
+					}
+				}
 			}
 		},
 	}
+
+	listFilesCmd.Flags().BoolVarP(&fullPath, "full", "", false, "full path")
 
 	parentCmd.AddCommand(
 		listFilesCmd,

@@ -31,6 +31,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 const initalOllamaChatModel = "ollama:llama3.1:8b"
@@ -217,4 +219,18 @@ func (app *AppContext) NewAIClient(provider string) (AIClient, error) {
 	}
 
 	return nil, fmt.Errorf("'%v' is an unknown AI provider", provider)
+}
+
+// OutputAIAnswer outputs an AI answer to STDOUT.
+func (app *AppContext) OutputAIAnswer(answer string) {
+	stdout := app.Stdout
+
+	if !app.NoHighlight && term.IsTerminal(int(stdout.Fd())) {
+		chroma := app.GetChromaSettings()
+		chroma.HighlightMarkdown(answer)
+
+		app.Writeln()
+	} else {
+		app.WriteString(answer)
+	}
 }

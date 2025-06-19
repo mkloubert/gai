@@ -30,7 +30,6 @@ import (
 
 	"github.com/mkloubert/gai/types"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 // Init_chat_Command initializes the `chat` command.
@@ -87,23 +86,14 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			answer, _, err := app.AI.Chat(chat, message, options...)
 			app.CheckIfError(err)
 
-			if !app.NoHighlight && term.IsTerminal(int(os.Stdout.Fd())) {
-				chroma := app.GetChromaSettings()
-				chroma.HighlightMarkdown(answer)
-
-				app.Writeln()
-			} else {
-				app.WriteString(answer)
-			}
+			app.OutputAIAnswer(answer)
 
 			err = chat.UpdateConversation()
 			app.CheckIfError(err)
 		},
 	}
 
-	app.WithEditorCLIFlags(chatCmd)
-	app.WithHighlightFlags(chatCmd)
-	app.WithSchemaFlags(chatCmd)
+	app.WithChatFlags(chatCmd)
 	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
 
 	parentCmd.AddCommand(

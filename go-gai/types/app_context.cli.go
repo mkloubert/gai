@@ -24,6 +24,11 @@ package types
 
 import "github.com/spf13/cobra"
 
+// WithChatFlags sets up `cmd` for chat based CLI flags.
+func (app *AppContext) WithChatFlags(cmd *cobra.Command) {
+	app.WithPromptFlags(cmd)
+}
+
 // WithEditorCLIFlags sets up `cmd` for editor based CLI flags.
 func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 	// --edit
@@ -36,6 +41,13 @@ func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 func (app *AppContext) WithHighlightFlags(cmd *cobra.Command) {
 	// --no-highlight
 	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "fo not highlight output")
+}
+
+// WithPromptFlags sets up `cmd` for prompt based CLI flags.
+func (app *AppContext) WithPromptFlags(cmd *cobra.Command) {
+	app.WithEditorCLIFlags(cmd)
+	app.WithHighlightFlags(cmd)
+	app.WithSchemaFlags(cmd)
 }
 
 // WithFormatFlags sets up `cmd` for (response) format based CLI flags.
