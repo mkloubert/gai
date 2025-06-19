@@ -67,11 +67,11 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
 
-				defer file.Close()
-
 				options = append(options, types.AIClientPromptOptions{
 					Files: &[]io.Reader{file},
 				})
+
+				file.Close()
 			}
 
 			response, err := app.AI.Prompt(prompt, options...)

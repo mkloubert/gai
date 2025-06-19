@@ -76,11 +76,11 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
 
-				defer file.Close()
-
 				options = append(options, types.AIClientChatOptions{
 					Files: &[]io.Reader{file},
 				})
+
+				file.Close()
 			}
 
 			answer, _, err := app.AI.Chat(chat, message, options...)
