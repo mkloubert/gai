@@ -244,7 +244,9 @@ Your answer:`,
 				responseSchemaName = "FileUpdateSchema"
 			}
 
-			systemPrompt := ``
+			systemPrompt := `You are a helpful software developer reviewer helping a user analyze and update source code.
+The user will start by submitting each file with its contents as serialized JSON strings.  
+After this, the user will submit their question or query, and you will follow it exactly and answer with new content and information what you have changed.`
 
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{

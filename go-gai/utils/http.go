@@ -28,18 +28,19 @@ import (
 	"net/http"
 )
 
-// CheckForHttpResponseError build error object based on the status code in `resp`.
+// CheckForHttpResponseError builds an error object based on the status code in `resp`.
 func CheckForHttpResponseError(resp *http.Response) error {
-	if resp.StatusCode != 200 {
-		if resp.StatusCode == 400 || resp.StatusCode == 429 {
-			responseData, err := io.ReadAll(resp.Body)
-			if err == nil {
-				return fmt.Errorf("bad request 400: %v", string(responseData))
-			}
-		}
-
-		return fmt.Errorf("unexpected response %v", resp.StatusCode)
+	if resp.StatusCode == 200 {
+		return nil
 	}
 
-	return nil
+	if resp.StatusCode == 400 || resp.StatusCode == 429 {
+		responseData, err := io.ReadAll(resp.Body)
+		if err == nil {
+			return fmt.Errorf("request failed with status %d: %s", resp.StatusCode, string(responseData))
+		}
+		return fmt.Errorf("request failed with status %d and error reading response body", resp.StatusCode)
+	}
+
+	return fmt.Errorf("unexpected response status code: %d", resp.StatusCode)
 }
