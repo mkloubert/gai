@@ -24,6 +24,7 @@ package utils
 
 // RemoveDuplicateStrings creates a new string slice with unique entries.
 func RemoveDuplicateStrings(input []string) []string {
+	// 'seen' keeps track of strings that have already been added to the result.
 	seen := map[string]bool{}
 
 	result := make([]string, 0)

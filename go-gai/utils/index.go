@@ -27,7 +27,7 @@ import (
 	"os"
 )
 
-// CheckIfError checks if `err` is not `nil` and exists in this case with exit code 1.
+// CheckIfError checks if `err` is not `nil` and exits the program with exit code 1 after printing the error to stderr.
 func CheckIfError(err error) {
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)

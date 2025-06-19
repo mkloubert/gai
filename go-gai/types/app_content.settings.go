@@ -80,7 +80,7 @@ func (app *AppContext) loadEnvFilesIfExist() {
 	}
 
 	if !app.SkipDefaultEnvFiles {
-		// load default en files
+		// load default env files
 
 		appDir, err := app.EnsureAppDir()
 		app.CheckIfError(err)
@@ -97,7 +97,6 @@ func (app *AppContext) loadEnvFilesIfExist() {
 				if _, err := os.Stat(envPath); err == nil {
 					loadFromFile(envPath)
 				} else if !os.IsNotExist(err) {
-					// could not check for .env
 					app.CheckIfError(err)
 				}
 			}()

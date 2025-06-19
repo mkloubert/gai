@@ -62,7 +62,8 @@ type updateCodeResponse struct {
 }
 
 type updateCodeResponseFileToUpdateToUpdate struct {
-	NewContent string `json:"new_content"`
+	Explanation string `json:"explanation"`
+	NewContent  string `json:"new_content"`
 }
 
 func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
@@ -234,8 +235,12 @@ Your answer:`,
 					properties1[f] = map[string]any{
 						"description": fmt.Sprintf("Information how the file '%v' should be updated.", f),
 						"type":        "object",
-						"required":    []string{"new_content"},
+						"required":    []string{"explanation", "new_content"},
 						"properties": map[string]any{
+							"explanation": map[string]any{
+								"type":        "string",
+								"description": fmt.Sprintf("Detailed explanation of what has been changed in file '%s'.", f),
+							},
 							"new_content": map[string]any{
 								"type":        "string",
 								"description": fmt.Sprintf("New content for file '%s'.", f),
@@ -287,9 +292,16 @@ Your answer:`,
 				stat, err := os.Stat(fullPath)
 				app.CheckIfError(err)
 
-				os.WriteFile(fullPath, []byte(fileItem.NewContent), stat.Mode().Perm())
+				err = os.WriteFile(fullPath, []byte(fileItem.NewContent), stat.Mode().Perm())
+				app.CheckIfError(err)
 
-				app.Writeln(fmt.Sprintf("Wrote new content to '%s'", fileName))
+				app.OutputAIAnswer(fmt.Sprintf(
+					`Updated *%s*:
+%s%s`,
+					fileName,
+					fileItem.Explanation,
+					fmt.Sprintln(),
+				))
 			}
 		},
 	}

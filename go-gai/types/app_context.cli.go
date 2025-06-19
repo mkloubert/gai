@@ -31,16 +31,13 @@ func (app *AppContext) WithChatFlags(cmd *cobra.Command) {
 
 // WithEditorCLIFlags sets up `cmd` for editor based CLI flags.
 func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
-	// --edit
 	cmd.Flags().BoolVarP(&app.OpenEditor, "edit", "", false, "open editor")
-	// --editor=<COMMAND>
 	cmd.Flags().StringVarP(&app.Editor, "editor", "", "", "custom editor command")
 }
 
-// WithFormatFlags sets up `cmd` for highlight based CLI flags.
+// WithHighlightFlags sets up `cmd` for highlight based CLI flags.
 func (app *AppContext) WithHighlightFlags(cmd *cobra.Command) {
-	// --no-highlight
-	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "fo not highlight output")
+	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "do not highlight output")
 }
 
 // WithPromptFlags sets up `cmd` for prompt based CLI flags.
@@ -50,10 +47,8 @@ func (app *AppContext) WithPromptFlags(cmd *cobra.Command) {
 	app.WithSchemaFlags(cmd)
 }
 
-// WithFormatFlags sets up `cmd` for (response) format based CLI flags.
+// WithSchemaFlags sets up `cmd` for (response) format based CLI flags.
 func (app *AppContext) WithSchemaFlags(cmd *cobra.Command) {
-	// --schema
 	cmd.Flags().StringVarP(&app.SchemaFile, "schema", "", "", "file with response format/schema")
-	// --schema-name
 	cmd.Flags().StringVarP(&app.SchemaName, "schema-name", "", "", "name of the response format/schema")
 }

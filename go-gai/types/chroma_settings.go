@@ -13,7 +13,7 @@ type ChromaSettings struct {
 	Style string
 }
 
-// app.Highlight() - tries to output a string highlighted in the defined language
+// Highlight outputs a string highlighted in the defined language.
 func (cs *ChromaSettings) Highlight(s string, language string) {
 	err := quick.Highlight(cs.App, s, language, cs.Formatter, cs.Style)
 	if err != nil {
@@ -21,7 +21,7 @@ func (cs *ChromaSettings) Highlight(s string, language string) {
 	}
 }
 
-// app.HighlightMarkdown() - tries to output a string highlighted in Markdown
+// HighlightMarkdown outputs a string highlighted in Markdown.
 func (cs *ChromaSettings) HighlightMarkdown(s string) {
 	cs.Highlight(s, "markdown")
 }
