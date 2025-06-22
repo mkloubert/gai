@@ -133,10 +133,11 @@ func (ctx *ChatContext) AppendSimplePseudoUserConversation(um string, opts ...Ap
 
 // AppendTextFilesAsPseudoConversation reads content of `files` and add
 // pseudo conversation entries for each of them without updating the conversation file.
-func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) []*ConversationRepositoryConversationItem {
+func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) ([]string, []*ConversationRepositoryConversationItem) {
 	app := ctx.App
 
 	newItems := make([]*ConversationRepositoryConversationItem, 0)
+	relPaths := make([]string, 0)
 
 	for i, f := range files {
 		fullPath := f
@@ -172,9 +173,11 @@ Answer with 'OK' if you analyzed it%v.`,
 
 			newItems = append(newItems, added...)
 		}
+
+		relPaths = append(relPaths, relPath)
 	}
 
-	return newItems
+	return relPaths, newItems
 }
 
 func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversationContext {

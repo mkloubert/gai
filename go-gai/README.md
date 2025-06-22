@@ -1,8 +1,6 @@
 # gAI - Command Line Tool for AI Tasks
 
-gAI is a versatile command line tool designed to interact with AI models for various tasks such as chatting, code analysis, code updating, and more. It supports multiple AI providers and offers a rich set of commands and options to customize your AI interactions.
-
----
+> gAI is a versatile command line tool designed to interact with AI models for various tasks such as chatting, code analysis, code updating, and more. It supports multiple AI providers and offers a rich set of commands and options to customize your AI interactions.
 
 ## Installation
 
@@ -37,8 +35,6 @@ gAI is a versatile command line tool designed to interact with AI models for var
    gai --help
    ```
 
----
-
 ## Commands and Sub-Commands
 
 ### 1. `analize` (alias: `a`)
@@ -60,8 +56,6 @@ Analyze resources such as source code files.
   **Description:**
   This command reads the content of the specified files, sends them to the AI for analysis, and returns detailed explanations. It supports multiple files and integrates their context for a comprehensive analysis.
 
----
-
 ### 2. `chat` (alias: `c`)
 
 Interact with AI via chat.
@@ -78,8 +72,6 @@ gai chat "What is the weather today?"
 
 **Description:**
 Starts or continues a chat session with the AI. Supports sending files as context and resetting the conversation.
-
----
 
 ### 3. `list` (alias: `l`)
 
@@ -125,8 +117,6 @@ List various resources related to the app.
 
   - `--full`: Show full file paths.
 
----
-
 ### 4. `prompt` (alias: `p`)
 
 Send a prompt to the AI.
@@ -139,8 +129,6 @@ gai prompt "Write a poem about the sea."
 
 **Description:**
 Sends a single prompt to the AI and returns the response. Supports sending files as context.
-
----
 
 ### 5. `reset` (alias: `r`)
 
@@ -157,8 +145,6 @@ Reset resources.
   ```
   gai reset conversation
   ```
-
----
 
 ### 6. `update` (alias: `u`)
 
@@ -178,8 +164,6 @@ Update resources such as source code files.
 
   **Description:**
   Sends the content of the specified files and a task description to the AI, which returns updated file contents along with explanations. The tool then writes the updates back to the files.
-
----
 
 ## Supported Environment Variables and CLI Flags
 
@@ -204,7 +188,31 @@ Update resources such as source code files.
 | `GAI_TERMINAL_STYLE`     | `--terminal-style`     | Custom terminal style for output               | `--terminal-style=dracula`         |
 | `GAI_TEMPERATURE`        | `--temperature`, `-t`  | Temperature value for AI responses             | `--temperature=0.7`                |
 
----
+## Supported Global CLI Flags
+
+| Name                   | Description                          | Example                            |
+| ---------------------- | ------------------------------------ | ---------------------------------- |
+| `--api-key`, `-k`      | Global API key for AI provider       | `--api-key=sk-xxxx`                |
+| `--base-url`, `-u`     | Custom base URL for AI API           | `--base-url=https://api.custom`    |
+| `--context`, `-c`      | Name of the current AI context       | `--context=projectX`               |
+| `--cwd`                | Current working directory            | `--cwd=/path/to/dir`               |
+| `--edit`               | Open editor                          | `--edit`                           |
+| `--editor`             | Custom editor command                | `--editor=vim`                     |
+| `--eol`                | Custom EOL char sequence             | `--eol="\n"`                       |
+| `--env-file`, `-e`     | One or more env files to load        | `--env-file=.env.local`            |
+| `--file`, `-f`         | One or more files to use             | `--file=main.go`                   |
+| `--files`              | One or more file patterns to use     | `--files=*.go`                     |
+| `--home`               | User's home directory                | `--home=/home/user`                |
+| `--skip-env-files`     | Do not load default .env files       | `--skip-env-files`                 |
+| `--max-tokens`         | Maximum number of tokens             | `--max-tokens=1000`                |
+| `--model`, `-m`        | Default chat model                   | `--model=openai:gpt-4.1`           |
+| `--output`, `-o`       | Write output to this file            | `--output=result.txt`              |
+| `--system`, `-s`       | Custom system prompt                 | `--system="You are a helpful AI"`  |
+| `--system-role`        | Custom name/id of the system role    | `--system-role=system`             |
+| `--temperature`, `-t`  | Custom temperature value             | `--temperature=0.7`                |
+| `--terminal-formatter` | Custom terminal formatter for output | `--terminal-formatter=terminal16m` |
+| `--terminal-style`     | Custom terminal style for output     | `--terminal-style=dracula`         |
+| `--verbose`            | Verbose output                       | `--verbose`                        |
 
 ## Additional Notes
 
@@ -213,6 +221,10 @@ Update resources such as source code files.
 - The tool supports syntax highlighting for output when run in a terminal.
 - Editor integration allows editing prompts or inputs in your preferred text editor.
 - Environment variables can be used to set default values for CLI flags.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 

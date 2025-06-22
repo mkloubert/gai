@@ -96,10 +96,8 @@ Answer with 'OK' if you understand this.`,
 				},
 			)
 
-			filesToUpdate := make([]string, 0)
-
 			// start creating a pseudo conversation
-			chat.AppendTextFilesAsPseudoConversation(files)
+			filesToUpdate, _ := chat.AppendTextFilesAsPseudoConversation(files)
 
 			// setup final message and instructions
 			{
@@ -129,12 +127,9 @@ Your JSON:`,
 			if responseSchema == nil {
 				// build default schema
 
-				required1 := make([]string, 0)
 				properties1 := map[string]any{}
 
 				for _, f := range filesToUpdate {
-					required1 = append(required1, f)
-
 					properties1[f] = map[string]any{
 						"description": fmt.Sprintf("Information how the file '%v' should be updated.", f),
 						"type":        "object",
@@ -159,7 +154,6 @@ Your JSON:`,
 						"updated_files": map[string]any{
 							"type":        "object",
 							"description": "List of files that should be updated.",
-							"required":    required1,
 							"properties":  properties1,
 						},
 					},
