@@ -76,50 +76,11 @@ func init_analize_code_Command(app *types.AppContext, parentCmd *cobra.Command) 
 
 			model := app.AI.ChatModel()
 
-			conversation := make(types.ConversationRepositoryConversation, 0)
-
-			addPseudoMessage := func(c string) {
-				// user message
-				{
-					userMessage := &types.ConversationRepositoryConversationItem{
-						Contents: make(types.ConversationRepositoryConversationItemContents, 0),
-						Model:    model,
-						Role:     "user",
-					}
-					newUserTextItem := &types.ConversationRepositoryConversationItemContentItem{
-						Content: c,
-						Type:    "text",
-					}
-					userMessage.Contents = append(userMessage.Contents, newUserTextItem)
-
-					conversation = append(conversation, userMessage)
-				}
-
-				// simulate answer
-				{
-					assistantMessage := &types.ConversationRepositoryConversationItem{
-						Contents: make(types.ConversationRepositoryConversationItemContents, 0),
-						Model:    model,
-						Role:     "assistant",
-						Time:     startTime,
-					}
-					assistantMessage.Contents = append(assistantMessage.Contents, &types.ConversationRepositoryConversationItemContentItem{
-						Content: "OK",
-						Type:    "text",
-					})
-
-					conversation = append(conversation, assistantMessage)
-				}
-			}
-
 			// user explaination
-			{
-				userContent := `I will start by submitting each file with its contents as serialized JSON strings.  
-After this, I will submit my question or query, and you will follow it exactly and answer in the same language.
-Answer with 'OK' if you understand this.`
 
-				addPseudoMessage(userContent)
-			}
+			chat.AppendSimplePseudoUserConversation(`I will start by submitting each file with its contents as serialized JSON strings.  
+After this, I will submit my question or query, and you will follow it exactly and answer in the same language.
+Answer with 'OK' if you understand this.`)
 
 			// start creating a pseudo conversation
 			for i, f := range files {
@@ -141,15 +102,13 @@ Answer with 'OK' if you understand this.`
 						messageSuffix = " and integrated it with the context of the other files"
 					}
 
-					userContent := fmt.Sprintf(
+					chat.AppendSimplePseudoUserConversation(fmt.Sprintf(
 						`This is the content of the file with the path '%s': "%s".
 Answer with 'OK' if you analyzed it%v.`,
 						relPath,
 						jsonData,
 						messageSuffix,
-					)
-
-					addPseudoMessage(userContent)
+					))
 				}
 			}
 
@@ -162,6 +121,7 @@ Answer with 'OK' if you analyzed it%v.`,
 					Contents: make(types.ConversationRepositoryConversationItemContents, 0),
 					Model:    model,
 					Role:     "user",
+					Time:     startTime,
 				}
 				newUserTextItem := &types.ConversationRepositoryConversationItemContentItem{
 					Content: fmt.Sprintf(
@@ -174,17 +134,7 @@ Your answer:`,
 				}
 				userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
-				conversation = append(conversation, userMessage)
-			}
-
-			// set pseudo conversation
-			{
-				updateConversationWithOptions := make([]types.UpdateConversationWithOptions, 0)
-				updateConversationWithOptions = append(updateConversationWithOptions, types.UpdateConversationWithOptions{
-					NoSave: &doNotSaveConversation,
-				})
-
-				chat.UpdateConversationWith(conversation, updateConversationWithOptions...)
+				chat.AppendConversationItem(userMessage)
 			}
 
 			// now do the chat and output anything ...

@@ -86,50 +86,15 @@ func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 			model := app.AI.ChatModel()
 
-			conversation := make(types.ConversationRepositoryConversation, 0)
-
-			addPseudoMessage := func(c string) {
-				// user message
-				{
-					userMessage := &types.ConversationRepositoryConversationItem{
-						Contents: make(types.ConversationRepositoryConversationItemContents, 0),
-						Model:    model,
-						Role:     "user",
-					}
-					newUserTextItem := &types.ConversationRepositoryConversationItemContentItem{
-						Content: c,
-						Type:    "text",
-					}
-					userMessage.Contents = append(userMessage.Contents, newUserTextItem)
-
-					conversation = append(conversation, userMessage)
-				}
-
-				// simulate answer
-				{
-					assistantMessage := &types.ConversationRepositoryConversationItem{
-						Contents: make(types.ConversationRepositoryConversationItemContents, 0),
-						Model:    model,
-						Role:     "assistant",
-						Time:     startTime,
-					}
-					assistantMessage.Contents = append(assistantMessage.Contents, &types.ConversationRepositoryConversationItemContentItem{
-						Content: "OK",
-						Type:    "text",
-					})
-
-					conversation = append(conversation, assistantMessage)
-				}
-			}
-
 			// user explaination
-			{
-				userContent := `I will start by submitting each file with its contents as serialized JSON strings.  
+			chat.AppendSimplePseudoUserConversation(`I will start by submitting each file with its contents as serialized JSON strings.  
 After this, I will submit my question or query, and you will follow it exactly and answer in the same language.
-Answer with 'OK' if you understand this.`
-
-				addPseudoMessage(userContent)
-			}
+Answer with 'OK' if you understand this.`,
+				types.AppendSimplePseudoUserConversationOptions{
+					Model: &model,
+					Time:  &startTime,
+				},
+			)
 
 			filesToUpdate := make([]string, 0)
 
@@ -153,15 +118,18 @@ Answer with 'OK' if you understand this.`
 						messageSuffix = " and integrated it with the context of the other files"
 					}
 
-					userContent := fmt.Sprintf(
+					chat.AppendSimplePseudoUserConversation(fmt.Sprintf(
 						`This is the content of the file with the path '%s': "%s".
 Answer with 'OK' if you analyzed it%v.`,
 						relPath,
 						jsonData,
 						messageSuffix,
+					),
+						types.AppendSimplePseudoUserConversationOptions{
+							Model: &model,
+							Time:  &startTime,
+						},
 					)
-
-					addPseudoMessage(userContent)
 				}
 
 				filesToUpdate = append(filesToUpdate, relPath)
@@ -176,29 +144,20 @@ Answer with 'OK' if you analyzed it%v.`,
 					Contents: make(types.ConversationRepositoryConversationItemContents, 0),
 					Model:    model,
 					Role:     "user",
+					Time:     startTime,
 				}
 				newUserTextItem := &types.ConversationRepositoryConversationItemContentItem{
 					Content: fmt.Sprintf(
 						`OK, this was the last file.  
 Now, this is your task: %s.  
-Your answer:`,
+Your JSON:`,
 						jsonsData,
 					),
 					Type: "text",
 				}
 				userMessage.Contents = append(userMessage.Contents, newUserTextItem)
 
-				conversation = append(conversation, userMessage)
-			}
-
-			// set pseudo conversation
-			{
-				updateConversationWithOptions := make([]types.UpdateConversationWithOptions, 0)
-				updateConversationWithOptions = append(updateConversationWithOptions, types.UpdateConversationWithOptions{
-					NoSave: &doNotSaveConversation,
-				})
-
-				chat.UpdateConversationWith(conversation, updateConversationWithOptions...)
+				chat.AppendConversationItem(userMessage)
 			}
 
 			if responseSchema == nil {
@@ -244,9 +203,10 @@ Your answer:`,
 				responseSchemaName = "FileUpdateSchema"
 			}
 
-			systemPrompt := `You are a helpful software developer reviewer helping a user analyze and update source code.
-The user will start by submitting each file with its contents as serialized JSON strings.  
-After this, the user will submit their question or query, and you will follow it exactly and answer with new content and information what you have changed.`
+			systemPrompt := `You are a skilled and helpful software developer acting as a code reviewer. Your job is to help the user analyze, update, and improve their source code.
+The user will submit each file as a JSON string containing its filename and contents.
+After all relevant files have been submitted, the user will send a question or request related to the codebase.
+Please follow the user’s instructions precisely and answer in the same language.`
 
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{
@@ -280,7 +240,7 @@ After this, the user will submit their question or query, and you will follow it
 %s%s`,
 					fileName,
 					fileItem.Explanation,
-					fmt.Sprintln(),
+					app.EOL,
 				))
 			}
 		},

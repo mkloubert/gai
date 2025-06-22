@@ -32,6 +32,17 @@ import (
 	"github.com/gosimple/slug"
 )
 
+// AppendSimplePseudoUserConversationOptions stores custom options for
+// `AppendSimplePseudoUserConversation` of `ChatContext`
+type AppendSimplePseudoUserConversationOptions struct {
+	// Answer stores custom assistant answer.
+	Answer *string
+	// Model defines custom model to use.
+	Model *string
+	// Time defines custom time string to use.
+	Time *string
+}
+
 // ChatContext handles chat context
 type ChatContext struct {
 	// App stores the underlying application context.
@@ -45,6 +56,78 @@ type ChatContext struct {
 type UpdateConversationWithOptions struct {
 	// NoSave is `true` if conversion file should not be updated.
 	NoSave *bool
+}
+
+// AppendConversationItem adds a new item to the current converatio
+// without updating the underyling conversation file.
+func (ctx *ChatContext) AppendConversationItem(item *ConversationRepositoryConversationItem) *ConversationRepositoryConversationItem {
+	conversationContext := ctx.ensureConversation()
+
+	conversationContext.Conversation = append(conversationContext.Conversation, item)
+
+	return item
+}
+
+// AppendSimplePseudoUserConversation adds an additional part of a pseudo conversation between a user and an assistant
+// without updating the underyling conversation file.
+func (ctx *ChatContext) AppendSimplePseudoUserConversation(um string, opts ...AppendSimplePseudoUserConversationOptions) []*ConversationRepositoryConversationItem {
+	app := ctx.App
+
+	answer := "OK"
+	model := app.AI.ChatModel()
+	time := app.GetISOTime()
+	for _, o := range opts {
+		if o.Answer != nil {
+			answer = *o.Answer
+		}
+		if o.Model != nil {
+			model = *o.Model
+		}
+		if o.Time != nil {
+			time = *o.Time
+		}
+	}
+
+	conversationContext := ctx.ensureConversation()
+
+	newItems := make([]*ConversationRepositoryConversationItem, 0)
+
+	// user message
+	{
+		userMessage := &ConversationRepositoryConversationItem{
+			Contents: make(ConversationRepositoryConversationItemContents, 0),
+			Model:    model,
+			Role:     "user",
+			Time:     time,
+		}
+		newUserTextItem := &ConversationRepositoryConversationItemContentItem{
+			Content: um,
+			Type:    "text",
+		}
+		userMessage.Contents = append(userMessage.Contents, newUserTextItem)
+
+		newItems = append(newItems, ctx.AppendConversationItem(userMessage))
+	}
+
+	// simulate answer
+	{
+		assistantMessage := &ConversationRepositoryConversationItem{
+			Contents: make(ConversationRepositoryConversationItemContents, 0),
+			Model:    model,
+			Role:     "assistant",
+			Time:     time,
+		}
+		assistantMessage.Contents = append(assistantMessage.Contents, &ConversationRepositoryConversationItemContentItem{
+			Content: answer,
+			Type:    "text",
+		})
+
+		newItems = append(newItems, ctx.AppendConversationItem(assistantMessage))
+	}
+
+	conversationContext.Conversation = append(conversationContext.Conversation, newItems...)
+
+	return newItems
 }
 
 func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversationContext {
