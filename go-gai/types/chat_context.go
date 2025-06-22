@@ -23,6 +23,7 @@
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -126,6 +127,52 @@ func (ctx *ChatContext) AppendSimplePseudoUserConversation(um string, opts ...Ap
 	}
 
 	conversationContext.Conversation = append(conversationContext.Conversation, newItems...)
+
+	return newItems
+}
+
+// AppendTextFilesAsPseudoConversation reads content of `files` and add
+// pseudo conversation entries for each of them without updating the conversation file.
+func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) []*ConversationRepositoryConversationItem {
+	app := ctx.App
+
+	newItems := make([]*ConversationRepositoryConversationItem, 0)
+
+	for i, f := range files {
+		fullPath := f
+		if !filepath.IsAbs(fullPath) {
+			fullPath = filepath.Join(app.WorkingDirectory, fullPath)
+		}
+
+		relPath, err := filepath.Rel(app.WorkingDirectory, fullPath)
+		app.CheckIfError(err)
+
+		data, err := os.ReadFile(fullPath)
+		app.CheckIfError(err)
+
+		strData := string(data)
+
+		jsonData, err := json.Marshal(strData)
+		app.CheckIfError(err)
+
+		// user message with file and content
+		{
+			messageSuffix := ""
+			if i > 0 {
+				messageSuffix = " and integrate it with the context of the other files"
+			}
+
+			added := ctx.AppendSimplePseudoUserConversation(fmt.Sprintf(
+				`This is the content of the file with the path '%s': "%s".
+Answer with 'OK' if you analyzed it%v.`,
+				relPath,
+				jsonData,
+				messageSuffix,
+			))
+
+			newItems = append(newItems, added...)
+		}
+	}
 
 	return newItems
 }

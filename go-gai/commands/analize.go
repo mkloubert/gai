@@ -26,8 +26,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
 	"github.com/mkloubert/gai/types"
@@ -83,34 +81,7 @@ After this, I will submit my question or query, and you will follow it exactly a
 Answer with 'OK' if you understand this.`)
 
 			// start creating a pseudo conversation
-			for i, f := range files {
-				relPath, err := filepath.Rel(app.WorkingDirectory, f)
-				app.CheckIfError(err)
-
-				data, err := os.ReadFile(f)
-				app.CheckIfError(err)
-
-				strData := string(data)
-
-				jsonData, err := json.Marshal(strData)
-				app.CheckIfError(err)
-
-				// user message with file and content
-				{
-					messageSuffix := ""
-					if i > 0 {
-						messageSuffix = " and integrated it with the context of the other files"
-					}
-
-					chat.AppendSimplePseudoUserConversation(fmt.Sprintf(
-						`This is the content of the file with the path '%s': "%s".
-Answer with 'OK' if you analyzed it%v.`,
-						relPath,
-						jsonData,
-						messageSuffix,
-					))
-				}
-			}
+			chat.AppendTextFilesAsPseudoConversation(files)
 
 			// setup final message and instructions
 			{
@@ -139,12 +110,20 @@ Your answer:`,
 
 			// now do the chat and output anything ...
 
-			systemPrompt := `You are a helpful, thorough, and articulate assistant helping a user analyze source code.
+			outputLanguage := strings.TrimSpace(app.OutputLanguage)
+
+			langInfo := "same language as input"
+			if outputLanguage != "" {
+				langInfo = fmt.Sprintf("'%s' language", outputLanguage)
+			}
+
+			systemPrompt := fmt.Sprintf(`You are a helpful, thorough, and articulate assistant helping a user analyze source code.
 Always respond with detailed explanations, clear structure, and relevant examples.
 Break down complex topics step by step.
 When appropriate, use bullet points, headings, or code snippets to enhance clarity.
 The user will start by submitting each file with its contents as serialized JSON strings.  
-After this, the user will submit their question or query, and you will follow it exactly and answer in the same language.`
+After this, the user will submit their question or query, and you will follow it exactly and answer in %s.`,
+				langInfo)
 
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{
@@ -161,6 +140,7 @@ After this, the user will submit their question or query, and you will follow it
 	}
 
 	app.WithChatFlags(analizeCodeCmd)
+	app.WithLanguageFlags(analizeCodeCmd)
 
 	parentCmd.AddCommand(
 		analizeCodeCmd,
@@ -169,7 +149,7 @@ After this, the user will submit their question or query, and you will follow it
 
 // Init_analize_Command initializes the `analize` command.
 func Init_analize_Command(app *types.AppContext, parentCmd *cobra.Command) {
-	var listCmd = &cobra.Command{
+	var analizeCmd = &cobra.Command{
 		Use:     "analize [resource]",
 		Aliases: []string{"a"},
 		Short:   "Analize",
@@ -179,9 +159,9 @@ func Init_analize_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		},
 	}
 
-	init_analize_code_Command(app, listCmd)
+	init_analize_code_Command(app, analizeCmd)
 
 	parentCmd.AddCommand(
-		listCmd,
+		analizeCmd,
 	)
 }

@@ -22,6 +22,29 @@
 
 package utils
 
+import (
+	"encoding/base64"
+	"fmt"
+	"strings"
+)
+
+// DataURIToBytes converts `dataURI` to byte array.
+func DataURIToBytes(dataURI string) ([]byte, error) {
+	const base64Prefix = ";base64,"
+
+	idx := strings.Index(dataURI, base64Prefix)
+	if idx < 0 {
+		return nil, fmt.Errorf("not a base64 data URI")
+	}
+
+	base64Data := dataURI[idx+len(base64Prefix):]
+	data, err := base64.StdEncoding.DecodeString(base64Data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 // RemoveDuplicateStrings creates a new string slice with unique entries.
 func RemoveDuplicateStrings(input []string) []string {
 	// 'seen' keeps track of strings that have already been added to the result.

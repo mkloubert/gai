@@ -99,41 +99,7 @@ Answer with 'OK' if you understand this.`,
 			filesToUpdate := make([]string, 0)
 
 			// start creating a pseudo conversation
-			for i, f := range files {
-				relPath, err := filepath.Rel(app.WorkingDirectory, f)
-				app.CheckIfError(err)
-
-				data, err := os.ReadFile(f)
-				app.CheckIfError(err)
-
-				strData := string(data)
-
-				jsonData, err := json.Marshal(strData)
-				app.CheckIfError(err)
-
-				// user message with file and content
-				{
-					messageSuffix := ""
-					if i > 0 {
-						messageSuffix = " and integrated it with the context of the other files"
-					}
-
-					chat.AppendSimplePseudoUserConversation(fmt.Sprintf(
-						`This is the content of the file with the path '%s': "%s".
-Answer with 'OK' if you analyzed it%v.`,
-						relPath,
-						jsonData,
-						messageSuffix,
-					),
-						types.AppendSimplePseudoUserConversationOptions{
-							Model: &model,
-							Time:  &startTime,
-						},
-					)
-				}
-
-				filesToUpdate = append(filesToUpdate, relPath)
-			}
+			chat.AppendTextFilesAsPseudoConversation(files)
 
 			// setup final message and instructions
 			{
@@ -203,10 +169,18 @@ Your JSON:`,
 				responseSchemaName = "FileUpdateSchema"
 			}
 
-			systemPrompt := `You are a skilled and helpful software developer acting as a code reviewer. Your job is to help the user analyze, update, and improve their source code.
+			outputLanguage := strings.TrimSpace(app.OutputLanguage)
+
+			langInfo := "same language as input"
+			if outputLanguage != "" {
+				langInfo = fmt.Sprintf("'%s' language", outputLanguage)
+			}
+
+			systemPrompt := fmt.Sprintf(`You are a skilled and helpful software developer acting as a code reviewer. Your job is to help the user analyze, update, and improve their source code.
 The user will submit each file as a JSON string containing its filename and contents.
 After all relevant files have been submitted, the user will send a question or request related to the codebase.
-Please follow the user’s instructions precisely and answer in the same language.`
+Please follow the user’s instructions precisely and answer in %s.`,
+				langInfo)
 
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{
@@ -247,6 +221,7 @@ Please follow the user’s instructions precisely and answer in the same languag
 	}
 
 	app.WithChatFlags(updateCodeCmd)
+	app.WithLanguageFlags(updateCodeCmd)
 
 	parentCmd.AddCommand(
 		updateCodeCmd,

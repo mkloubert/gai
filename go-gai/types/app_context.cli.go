@@ -40,6 +40,11 @@ func (app *AppContext) WithHighlightFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "do not highlight output")
 }
 
+// WithPromptFlags sets up `cmd` for language based CLI flags.
+func (app *AppContext) WithLanguageFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&app.OutputLanguage, "language", "", "", "custom output language")
+}
+
 // WithPromptFlags sets up `cmd` for prompt based CLI flags.
 func (app *AppContext) WithPromptFlags(cmd *cobra.Command) {
 	app.WithEditorCLIFlags(cmd)

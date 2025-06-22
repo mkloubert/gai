@@ -73,6 +73,8 @@ type AppContext struct {
 	OpenEditor bool
 	// OutputFile stores where to store the ouput of the app to.
 	OutputFile string
+	// OutputLanguage stores the output language.
+	OutputLanguage string
 	// RootCommand stores the root command.
 	RootCommand *cobra.Command
 	// SchemaFile stores the path to the file with the response format/schema.
