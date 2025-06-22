@@ -23,10 +23,33 @@
 package types
 
 import (
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
 )
+
+// CreateExecCommand creates a new pre-setuped command.
+func (app *AppContext) CreateExecCommand(f string, args ...string) *exec.Cmd {
+	cmd := exec.Command(f, args...)
+
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	return cmd
+}
+
+// RunExecCommand runs a new pre-setuped command.
+func (app *AppContext) RunExecCommand(f string, args ...string) (*exec.Cmd, error) {
+	cmd := app.CreateExecCommand(f, args...)
+
+	cmd.Dir = app.WorkingDirectory
+
+	err := cmd.Run()
+
+	return cmd, err
+}
 
 // TryGetBestOpenEditorCommand tries to find and return the best command to open a file for editing with the given file path.
 // It returns the command and its arguments as a slice of strings.

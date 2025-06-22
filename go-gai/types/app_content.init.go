@@ -100,4 +100,12 @@ func (app *AppContext) Init() {
 	app.initWorkingDirectory()
 
 	app.loadEnvFilesIfExist()
+
+	outputFile := app.GetOutputFile()
+	if outputFile != "" {
+		file, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		app.CheckIfError(err)
+
+		app.Stdout = file
+	}
 }

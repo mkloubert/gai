@@ -27,7 +27,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -82,9 +81,7 @@ func (app *AppContext) GetChromaSettings() *ChromaSettings {
 
 // GetInput retrieves user input from the command-line arguments, standard input, or an editor.
 func (app *AppContext) GetInput(args []string) (string, error) {
-	stderr := app.Stderr
 	stdin := app.Stdin
-	stdout := app.Stdout
 
 	GAI_INPUT_ORDER := app.GetEnv("GAI_INPUT_ORDER")
 
@@ -140,14 +137,13 @@ func (app *AppContext) GetInput(args []string) (string, error) {
 		defer os.Remove(tmpFilePath)
 
 		// run the editor command
-		cmd := exec.Command(editorPath, editorArgs...)
-
-		cmd.Stdin = stdin
-		cmd.Stdout = stdout
-		cmd.Stderr = stderr
+		cmd := app.CreateExecCommand(editorPath, editorArgs...)
 		cmd.Dir = path.Dir(tmpFilePath)
 
-		cmd.Run()
+		err = cmd.Run()
+		if err != nil {
+			return err
+		}
 
 		// read the contents of the temporary file
 		tmpData, err := os.ReadFile(tmpFilePath)
@@ -222,6 +218,23 @@ func (app *AppContext) GetInput(args []string) (string, error) {
 	return strings.TrimSpace(
 		strings.Join(parts, *GAI_INPUT_SEPARATOR),
 	), nil
+}
+
+// GetOutputFile returns the path to the file where to write output to
+func (app *AppContext) GetOutputFile() string {
+	outputFile := strings.TrimSpace(app.OutputFile) // first try flags
+	if outputFile == "" {
+		outputFile = strings.TrimSpace(app.GetEnv("GAI_OUTPUT_FILE")) // now try env var
+	}
+
+	if outputFile != "" {
+		// ensure its absolute
+		if !filepath.IsAbs(outputFile) {
+			outputFile = filepath.Join(app.WorkingDirectory, outputFile)
+		}
+	}
+
+	return outputFile
 }
 
 // Write writes `b` to `Stdout`.

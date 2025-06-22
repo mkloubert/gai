@@ -69,6 +69,7 @@ func main() {
 	flags.BoolVarP(&app.SkipDefaultEnvFiles, "skip-env-files", "", false, "do not load default .env files")
 	flags.Int64VarP(&app.MaxTokens, "max-tokens", "", 0, "maximum number of tokens")
 	flags.StringVarP(&app.Model, "model", "m", "", "default chat model")
+	flags.StringVarP(&app.OutputFile, "output", "o", "", "write output to this file")
 	flags.StringVarP(&app.SystemPrompt, "system", "s", "", "custom system prompt")
 	flags.StringVarP(&app.SystemRole, "system-role", "", "", "custom name/id of the system role")
 	flags.Float64VarP(&app.Temperature, "temperature", "t", -1, "custom temperature value")

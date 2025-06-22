@@ -1,33 +1,219 @@
-# gAI
+# gAI - Command Line Tool for AI Tasks
 
-> A command line tool for AI based tasks written in [Go](https://go.dev).
+gAI is a versatile command line tool designed to interact with AI models for various tasks such as chatting, code analysis, code updating, and more. It supports multiple AI providers and offers a rich set of commands and options to customize your AI interactions.
 
-## Usage
+---
 
-Move to project root and execute
+## Installation
 
-```bash
-go run . --help
+### Prerequisites
+
+- Go 1.24.2 or higher installed on your system.
+- Internet connection for downloading dependencies and interacting with AI APIs.
+
+### Building the Binary
+
+1. Clone the repository:
+
+   ```
+   git clone https://github.com/mkloubert/gai.git
+   cd gai
+   ```
+
+2. Build the binary using Go:
+
+   ```
+   go build -o gai .
+   ```
+
+3. Optionally, move the binary to a directory in your PATH:
+
+   ```
+   mv gai /usr/local/bin/
+   ```
+
+4. Verify the installation by running:
+   ```
+   gai --help
+   ```
+
+---
+
+## Commands and Sub-Commands
+
+### 1. `analize` (alias: `a`)
+
+Analyze resources such as source code files.
+
+#### Sub-commands:
+
+- **`code` (alias: `c`)**
+
+  Analyze source code files specified by `--file` or `--files` flags.
+
+  **Usage:**
+
+  ```
+  gai analize code --file main.go --file utils.go "Explain the architecture of this code."
+  ```
+
+  **Description:**
+  This command reads the content of the specified files, sends them to the AI for analysis, and returns detailed explanations. It supports multiple files and integrates their context for a comprehensive analysis.
+
+---
+
+### 2. `chat` (alias: `c`)
+
+Interact with AI via chat.
+
+**Usage:**
+
+```
+gai chat "What is the weather today?"
 ```
 
-in your terminal.
+**Options:**
 
-## Settings
+- `--reset`, `-r`: Reset the conversation before starting.
 
-### Environment variables
+**Description:**
+Starts or continues a chat session with the AI. Supports sending files as context and resetting the conversation.
 
-| Name                     | Description                                                                                                                                                    | Example / Default                                                          |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `GAI_BASE_URL`           | Custom base URL for API operations like AI chats.                                                                                                              | `http://localhost:11434`                                                   |
-| `GAI_CONTEXT`            | Name of the current AI context.                                                                                                                                | `Project X`                                                                |
-| `GAI_DEFAULT_CHAT_MODEL` | The default provider and model for chat conversations.                                                                                                         | `openai:gpt-4.1-mini`                                                      |
-| `GAI_EDITOR`             | Command of custom editor to use.                                                                                                                               | `nano`                                                                     |
-| `GAI_INPUT_SEPARATOR`    | Custom separator string for input.                                                                                                                             | ` `                                                                        |
-| `GAI_INPUT_ORDER`        | Comma separated list of flags in what order to read string. Allowed values ares `args`/`a`, `editor`/`e` and `stdin`/`in`                                      | `a,in,e`                                                                   |
-| `GAI_MAX_TOKENS`         | Maximum number tokens to return / use.                                                                                                                         | `10000`                                                                    |
-| `GAI_SYSTEM_PROMPT`      | Custom / explicit system prompt.                                                                                                                               | `You are a helpful assistant. Your answers will always end with 'M'kay?'.` |
-| `GAI_SYSTEM_ROLE`        | Custom name/ID of the system role.                                                                                                                             | `developer`                                                                |
-| `GAI_TERMINAL_FORMATTER` | Default formatter for syntax highlighting in terminal. See [chroma project](https://github.com/alecthomas/chroma/tree/master/formatters) for more information. | `terminal16m`                                                              |
-| `GAI_TERMINAL_STYLE`     | Default style for syntax highlighting in terminal.. See [chroma project](https://github.com/alecthomas/chroma/tree/master/styles) for more information.        | `dracula`                                                                  |
-| `GAI_TEMPERATURE`        | Temperature value for AI operations. Usually between `0` and `2`.                                                                                              | `0.3`                                                                      |
-| `OPENAI_API_KEY`         | The key for the [OpenAI API](https://help.openai.com/en/articles/4936850-where-do-i-find-my-openai-api-key).                                                   | `sk-proj-...xyz`                                                           |
+---
+
+### 3. `list` (alias: `l`)
+
+List various resources related to the app.
+
+#### Sub-commands:
+
+- **`conversation` (alias: `c`)**
+
+  List the current conversation in the context.
+
+  **Usage:**
+
+  ```
+  gai list conversation
+  ```
+
+- **`env` (alias: `e`)**
+
+  List all environment variables used by the app.
+
+  **Usage:**
+
+  ```
+  gai list env
+  ```
+
+  **Flags:**
+
+  - `--no-sort`: Do not sort the environment variables.
+
+- **`files`**
+
+  List files specified by `--file` or `--files`.
+
+  **Usage:**
+
+  ```
+  gai list files --file main.go --files "*.go"
+  ```
+
+  **Flags:**
+
+  - `--full`: Show full file paths.
+
+---
+
+### 4. `prompt` (alias: `p`)
+
+Send a prompt to the AI.
+
+**Usage:**
+
+```
+gai prompt "Write a poem about the sea."
+```
+
+**Description:**
+Sends a single prompt to the AI and returns the response. Supports sending files as context.
+
+---
+
+### 5. `reset` (alias: `r`)
+
+Reset resources.
+
+#### Sub-commands:
+
+- **`conversation` (alias: `c`)**
+
+  Reset the current conversation context.
+
+  **Usage:**
+
+  ```
+  gai reset conversation
+  ```
+
+---
+
+### 6. `update` (alias: `u`)
+
+Update resources such as source code files.
+
+#### Sub-commands:
+
+- **`code` (alias: `c`)**
+
+  Update source code files as specified by `--file` or `--files` flags.
+
+  **Usage:**
+
+  ```
+  gai update code --file main.go "Refactor this code to improve readability."
+  ```
+
+  **Description:**
+  Sends the content of the specified files and a task description to the AI, which returns updated file contents along with explanations. The tool then writes the updates back to the files.
+
+---
+
+## Supported Environment Variables and CLI Flags
+
+| Environment Variable     | CLI Flag(s)            | Description                                    | Example                            |
+| ------------------------ | ---------------------- | ---------------------------------------------- | ---------------------------------- |
+| `GAI_API_KEY`            | `--api-key`, `-k`      | Global API key for AI provider                 | `--api-key=sk-xxxx`                |
+| `GAI_BASE_URL`           | `--base-url`, `-u`     | Custom base URL for AI API                     | `--base-url=https://api.custom`    |
+| `GAI_CONTEXT`            | `--context`, `-c`      | Name of the current AI context                 | `--context=projectX`               |
+| `GAI_DEFAULT_CHAT_MODEL` | `--model`, `-m`        | Default AI chat model (format: provider:model) | `--model=openai:gpt-4.1`           |
+| `GAI_EDITOR`             | `--editor`             | Custom editor command                          | `--editor=vim`                     |
+| `GAI_ENV_FILE`           | `--env-file`, `-e`     | Additional env files to load                   | `--env-file=.env.local`            |
+| `GAI_FILE`               | `--file`, `-f`         | One or more files to use                       | `--file=main.go`                   |
+| `GAI_FILES`              | `--files`              | One or more file patterns to use               | `--files=*.go`                     |
+| `GAI_INPUT_ORDER`        |                        | Order of input sources: args, stdin, editor    | `args,stdin,editor`                |
+| `GAI_INPUT_SEPARATOR`    |                        | Separator used when concatenating inputs       | `" "`                              |
+| `GAI_MAX_TOKENS`         | `--max-tokens`         | Maximum number of tokens to use                | `--max-tokens=1000`                |
+| `GAI_OUTPUT_FILE`        | `--output`, `-o`       | File to write output to                        | `--output=result.txt`              |
+| `GAI_SKIP_ENV_FILES`     | `--skip-env-files`     | Skip loading default `.env` files              | `--skip-env-files`                 |
+| `GAI_SYSTEM_PROMPT`      | `--system`, `-s`       | Custom system prompt for AI                    | `--system="You are a helpful AI"`  |
+| `GAI_SYSTEM_ROLE`        | `--system-role`        | Custom name/id of the system role              | `--system-role=system`             |
+| `GAI_TERMINAL_FORMATTER` | `--terminal-formatter` | Custom terminal formatter for output           | `--terminal-formatter=terminal16m` |
+| `GAI_TERMINAL_STYLE`     | `--terminal-style`     | Custom terminal style for output               | `--terminal-style=dracula`         |
+| `GAI_TEMPERATURE`        | `--temperature`, `-t`  | Temperature value for AI responses             | `--temperature=0.7`                |
+
+---
+
+## Additional Notes
+
+- The tool supports multiple AI providers, including OpenAI and Ollama.
+- Conversations and context are stored locally in YAML files under the user's home directory.
+- The tool supports syntax highlighting for output when run in a terminal.
+- Editor integration allows editing prompts or inputs in your preferred text editor.
+- Environment variables can be used to set default values for CLI flags.
+
+---
+
+For more information, visit the [GitHub repository](https://github.com/mkloubert/gai).
