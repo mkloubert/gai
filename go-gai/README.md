@@ -1,6 +1,6 @@
 # gAI - Command Line Tool for AI Tasks
 
-> gAI is a versatile command line tool designed to interact with AI models for various tasks such as chatting, code analysis, code updating, and more. It supports multiple AI providers and offers a rich set of commands and options to customize your AI interactions.
+> gAI is a versatile command line tool designed to interact with AI models for various tasks such as chatting, code analysis, code updating, project initialization, and more. It supports multiple AI providers and offers a rich set of commands and options to customize your AI interactions.
 
 ## Installation
 
@@ -73,7 +73,26 @@ gai chat "What is the weather today?"
 **Description:**
 Starts or continues a chat session with the AI. Supports sending files as context and resetting the conversation.
 
-### 3. `list` (alias: `l`)
+### 3. `init` (alias: `i`)
+
+Initialize resources such as source code projects.
+
+#### Sub-commands:
+
+- **`code` (alias: `c`)**
+
+  Initialize a new source code project with a given name and instructions.
+
+  **Usage:**
+
+  ```
+  gai init code myproject "Create a new Go web server project."
+  ```
+
+  **Description:**
+  This command creates a new project directory, generates multiple files and subfolders as needed, and provides a detailed README to get started quickly.
+
+### 4. `list` (alias: `l`)
 
 List various resources related to the app.
 
@@ -117,7 +136,7 @@ List various resources related to the app.
 
   - `--full`: Show full file paths.
 
-### 4. `prompt` (alias: `p`)
+### 5. `prompt` (alias: `p`)
 
 Send a prompt to the AI.
 
@@ -130,7 +149,7 @@ gai prompt "Write a poem about the sea."
 **Description:**
 Sends a single prompt to the AI and returns the response. Supports sending files as context.
 
-### 5. `reset` (alias: `r`)
+### 6. `reset` (alias: `r`)
 
 Reset resources.
 
@@ -146,7 +165,7 @@ Reset resources.
   gai reset conversation
   ```
 
-### 6. `update` (alias: `u`)
+### 7. `update` (alias: `u`)
 
 Update resources such as source code files.
 
