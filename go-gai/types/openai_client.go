@@ -26,9 +26,9 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
+	"mime"
 	"net/http"
 	"strings"
 
@@ -49,7 +49,7 @@ func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, it
 			Role:    item.Role,
 		}
 
-		for _, content := range item.Contents {
+		for i, content := range item.Contents {
 			var newItem any
 
 			if content.Type == "text" {
@@ -65,41 +65,49 @@ func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, it
 					Type: "image_url",
 				}
 			} else if content.Type == "audio" {
-				parts := strings.SplitN(content.Content, ",", 2)
-				if len(parts) != 2 {
-					return messages, errors.New("invalid data URI")
-				}
-
-				meta := strings.TrimPrefix(parts[0], "data:")
-				data := parts[1]
-
-				// MIME-Typ extrahieren
-				mimeParts := strings.SplitN(meta, ";", 2)
-				if len(mimeParts) < 1 {
-					return messages, fmt.Errorf("no MIME type found")
+				_, mimeType, err := utils.GetPartsOfDataURI(content.Content)
+				if err != nil {
+					return messages, err
 				}
 
 				format := ""
 
-				mime := strings.TrimSpace(
-					strings.ToLower(mimeParts[0]),
-				)
-				if strings.HasSuffix(mime, "mp3") || strings.HasSuffix(mime, "mpeg") {
+				if strings.HasSuffix(mimeType, "mp3") || strings.HasSuffix(mimeType, "mpeg") {
 					format = "mp3"
-				} else if strings.HasSuffix(mime, "wav") {
+				} else if strings.HasSuffix(mimeType, "wav") {
 					format = "wav"
 				}
 
 				if format == "" {
-					return messages, fmt.Errorf("unsupported audio format '%v'", mime)
+					return messages, fmt.Errorf("unsupported audio format '%v'", mimeType)
 				}
 
 				newItem = &OpenAIChatMessageContentAudioItem{
-					InputAudio: OpenAIChatMessageContentAudioItemInput{
-						Data:   data,
+					InputAudio: OpenAIChatMessageContentItemInputAudio{
+						Data:   content.Content,
 						Format: format,
 					},
 					Type: "input_audio",
+				}
+			} else {
+				// handle as file attachment
+
+				_, mimeType, err := utils.GetPartsOfDataURI(content.Content)
+				if err != nil {
+					return messages, err
+				}
+
+				fileExt, err := mime.ExtensionsByType(mimeType)
+				if err != nil {
+					return messages, err
+				}
+
+				newItem = &OpenAIChatMessageContentFileItem{
+					File: OpenAIChatMessageContentItemFile{
+						FileData: content.Content,
+						Filename: fmt.Sprintf("file_%d%s", i+1, fileExt),
+					},
+					Type: "file",
 				}
 			}
 
@@ -149,7 +157,15 @@ func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationIte
 				}
 				item.Contents = append(item.Contents, newUserImageItem)
 			} else {
-				return fmt.Errorf("mime type '%v' not supported", mimeType)
+				mimeType := http.DetectContentType(data)
+				encoded := base64.StdEncoding.EncodeToString(data)
+				dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
+
+				newUserImageItem := &ConversationRepositoryConversationItemContentItem{
+					Content: dataURI,
+					Type:    "attachment",
+				}
+				item.Contents = append(item.Contents, newUserImageItem)
 			}
 		}
 	}

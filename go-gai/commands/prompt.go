@@ -63,15 +63,22 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				ResponseSchemaName: &responseSchemaName,
 			})
 
+			openedFiles := make([]*os.File, 0)
+			defer func() {
+				for _, of := range openedFiles {
+					of.Close()
+				}
+			}()
+
 			for _, f := range files {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
 
+				openedFiles = append(openedFiles, file)
+
 				options = append(options, types.AIClientPromptOptions{
 					Files: &[]io.Reader{file},
 				})
-
-				file.Close()
 			}
 
 			response, err := app.AI.Prompt(prompt, options...)

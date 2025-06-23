@@ -72,15 +72,22 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				ResponseSchemaName: &responseSchemaName,
 			})
 
+			openedFiles := make([]*os.File, 0)
+			defer func() {
+				for _, of := range openedFiles {
+					of.Close()
+				}
+			}()
+
 			for _, f := range files {
 				file, err := os.Open(f)
 				app.CheckIfError(err)
 
+				openedFiles = append(openedFiles, file)
+
 				options = append(options, types.AIClientChatOptions{
 					Files: &[]io.Reader{file},
 				})
-
-				file.Close()
 			}
 
 			answer, _, err := app.AI.Chat(chat, message, options...)

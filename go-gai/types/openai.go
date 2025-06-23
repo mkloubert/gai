@@ -88,7 +88,7 @@ type OpenAIChatMessageContentImageItem struct {
 // an `OpenAIChatMessageContentImageItem` object.
 type OpenAIChatMessageContentImageItemUrl struct {
 	// Detail stores detail level of the image.
-	Detail string `json:"image_url,omitempty"`
+	Detail *string `json:"image_url,omitempty"`
 	// Url stores the URL auf the image.
 	Url string `json:"url,omitempty"`
 }
@@ -101,19 +101,38 @@ type OpenAIChatMessageContentTextItem struct {
 	Type string `json:"type,omitempty"`
 }
 
-// OpenAIChatMessageContentAudioItem represents an `OpenAIChatMessageContentItem` of type `audio_input`.
+// OpenAIChatMessageContentAudioItem represents an `OpenAIChatMessageContentItem` of type `input_audio`.
 type OpenAIChatMessageContentAudioItem struct {
 	// InputAudio stores the data of the audio.
-	InputAudio OpenAIChatMessageContentAudioItemInput `json:"input_audio,omitempty"`
-	// Type stores the value `audio_input`.
+	InputAudio OpenAIChatMessageContentItemInputAudio `json:"input_audio,omitempty"`
+	// Type stores the value `input_audio`.
 	Type string `json:"type,omitempty"`
 }
 
 // OpenAIChatMessageContentAudioItemInput stores information of the image URL in
 // an `OpenAIChatMessageContentAudioItem` object.
-type OpenAIChatMessageContentAudioItemInput struct {
+type OpenAIChatMessageContentItemInputAudio struct {
 	// Data stores the data in Base64 format.
 	Data string `json:"data,omitempty"`
 	// Format stores the value `mp3` or `wav`.
 	Format string `json:"format,omitempty"`
+}
+
+// OpenAIChatMessageContentFileItem represents an `OpenAIChatMessageContentItem` of type `file`.
+type OpenAIChatMessageContentFileItem struct {
+	// File stores the data of the file.
+	File OpenAIChatMessageContentItemFile `json:"file,omitempty"`
+	// Type stores the value `file`.
+	Type string `json:"type,omitempty"`
+}
+
+// OpenAIChatMessageContentFileItemInput stores information of the file in
+// an `OpenAIChatMessageContentFileItem` object.
+type OpenAIChatMessageContentItemFile struct {
+	// FileData stores data Base64 encoded.
+	FileData string `json:"file_data,omitempty"`
+	// FileId stores an optional ID of the file.
+	FileId *string `json:"file_id,omitempty"`
+	// Filename stores the name of the file.
+	Filename string `json:"filename,omitempty"`
 }
