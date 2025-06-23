@@ -73,7 +73,33 @@ gai chat "What is the weather today?"
 **Description:**
 Starts or continues a chat session with the AI. Supports sending files as context and resetting the conversation.
 
-### 3. `init` (alias: `i`)
+### 3. `describe` (alias: `d`)
+
+Describe resources such as images.
+
+#### Sub-commands:
+
+- **`images` (aliases: `image`, `img`, `imgs`, `i`)**
+
+  Describe images with tags and detailed information.
+
+  **Usage:**
+
+  ```
+  gai describe images --file photo.jpg "What is in this image?"
+  ```
+
+  **Description:**
+  This command analyzes image files specified by `--file` or `--files` flags and generates a concise description, a short title, and a set of relevant tags for each image. It supports output in multiple languages and can store results in a database.
+
+  **Flags:**
+
+  - `--force-update`: Force update existing database entries.
+  - `--max-tags`: Maximum number of tags to generate (default 10).
+  - `--min-tags`: Minimum number of tags to generate (default 1).
+  - `--update-existing`: Update existing database entries if present.
+
+### 4. `init` (alias: `i`)
 
 Initialize resources such as source code projects.
 
@@ -92,7 +118,7 @@ Initialize resources such as source code projects.
   **Description:**
   This command creates a new project directory, generates multiple files and subfolders as needed, and provides a detailed README to get started quickly.
 
-### 4. `list` (alias: `l`)
+### 5. `list` (alias: `l`)
 
 List various resources related to the app.
 
@@ -136,7 +162,7 @@ List various resources related to the app.
 
   - `--full`: Show full file paths.
 
-### 5. `prompt` (alias: `p`)
+### 6. `prompt` (alias: `p`)
 
 Send a prompt to the AI.
 
@@ -149,7 +175,7 @@ gai prompt "Write a poem about the sea."
 **Description:**
 Sends a single prompt to the AI and returns the response. Supports sending files as context.
 
-### 6. `reset` (alias: `r`)
+### 7. `reset` (alias: `r`)
 
 Reset resources.
 
@@ -165,7 +191,7 @@ Reset resources.
   gai reset conversation
   ```
 
-### 7. `update` (alias: `u`)
+### 8. `update` (alias: `u`)
 
 Update resources such as source code files.
 
@@ -192,6 +218,7 @@ Update resources such as source code files.
 | `GAI_BASE_URL`           | `--base-url`, `-u`     | Custom base URL for AI API                     | `--base-url=https://api.custom`    |
 | `GAI_CONTEXT`            | `--context`, `-c`      | Name of the current AI context                 | `--context=projectX`               |
 | `GAI_DEFAULT_CHAT_MODEL` | `--model`, `-m`        | Default AI chat model (format: provider:model) | `--model=openai:gpt-4.1`           |
+| `GAI_DATABASE`           | `--database`           | URI or path to database (usually SQLite)       | `--database=./images.db`           |
 | `GAI_EDITOR`             | `--editor`             | Custom editor command                          | `--editor=vim`                     |
 | `GAI_ENV_FILE`           | `--env-file`, `-e`     | Additional env files to load                   | `--env-file=.env.local`            |
 | `GAI_FILE`               | `--file`, `-f`         | One or more files to use                       | `--file=main.go`                   |
