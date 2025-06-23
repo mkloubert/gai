@@ -29,6 +29,11 @@ func (app *AppContext) WithChatFlags(cmd *cobra.Command) {
 	app.WithPromptFlags(cmd)
 }
 
+// WithDatabaseFlags sets up `cmd` for database based CLI flags.
+func (app *AppContext) WithDatabaseFlags(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&app.Database, "database", "", "", "uri or path to database")
+}
+
 // WithEditorCLIFlags sets up `cmd` for editor based CLI flags.
 func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&app.OpenEditor, "edit", "", false, "open editor")

@@ -80,6 +80,7 @@ func main() {
 	// Initialize commands
 	commands.Init_analize_Command(app, rootCmd)
 	commands.Init_chat_Command(app, rootCmd)
+	commands.Init_describe_Command(app, rootCmd)
 	commands.Init_init_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
 	commands.Init_prompt_Command(app, rootCmd)

@@ -47,6 +47,8 @@ type AppContext struct {
 	BaseUrl string
 	// Context stores the name of the current context.
 	Context string
+	// Database stores the path or URI to the database, usually a SQLite database.
+	Database string
 	// Editor stores the command for the custom editor to use.
 	Editor string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
