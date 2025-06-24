@@ -31,6 +31,7 @@ import (
 
 	"github.com/goccy/go-yaml"
 	"github.com/gosimple/slug"
+	"github.com/mkloubert/gai/utils"
 )
 
 // AppendSimplePseudoUserConversationOptions stores custom options for
@@ -133,7 +134,7 @@ func (ctx *ChatContext) AppendSimplePseudoUserConversation(um string, opts ...Ap
 
 // AppendTextFilesAsPseudoConversation reads content of `files` and add
 // pseudo conversation entries for each of them without updating the conversation file.
-func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) ([]string, []*ConversationRepositoryConversationItem) {
+func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) ([]string, []*ConversationRepositoryConversationItem, error) {
 	app := ctx.App
 
 	newItems := make([]*ConversationRepositoryConversationItem, 0)
@@ -146,15 +147,24 @@ func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) ([]s
 		}
 
 		relPath, err := filepath.Rel(app.WorkingDirectory, fullPath)
-		app.CheckIfError(err)
+		if err != nil {
+			return relPaths, newItems, err
+		}
 
 		data, err := os.ReadFile(fullPath)
-		app.CheckIfError(err)
+		if err != nil {
+			return relPaths, newItems, err
+		}
 
-		strData := string(data)
+		strData, err := utils.EnsurePlainText(data)
+		if err != nil {
+			return relPaths, newItems, err
+		}
 
 		jsonData, err := json.Marshal(strData)
-		app.CheckIfError(err)
+		if err != nil {
+			return relPaths, newItems, err
+		}
 
 		// user message with file and content
 		{
@@ -177,7 +187,7 @@ Answer with 'OK' if you analyzed it%v.`,
 		relPaths = append(relPaths, relPath)
 	}
 
-	return relPaths, newItems
+	return relPaths, newItems, nil
 }
 
 func (ctx *ChatContext) ensureConversation() *ConversationRepositoryConversationContext {

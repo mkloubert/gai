@@ -95,6 +95,8 @@ type AppContext struct {
 	SystemPrompt string
 	// SystemRole custom name of the system role.
 	SystemRole string
+	// TempDirectory stores the path of the custom temp directory.
+	TempDirectory string
 	// Temperature stores the temperature for AI operations.
 	Temperature float64
 	// TerminalFormatter defines the custom terminal formatter.
@@ -226,6 +228,20 @@ func (app *AppContext) GetFiles() ([]string, error) {
 	})
 
 	return files, nil
+}
+
+// GetFullPath returns full path of `p`.
+func (app *AppContext) GetFullPath(p string) string {
+	fullPath := strings.TrimSpace(p)
+	if fullPath == "" {
+		return app.WorkingDirectory
+	}
+
+	if !filepath.IsAbs(fullPath) {
+		fullPath = filepath.Join(app.WorkingDirectory, fullPath)
+	}
+
+	return fullPath
 }
 
 // GetISOTime() returns current timestamp in UTC ISO 8601 format.

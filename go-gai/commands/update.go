@@ -97,7 +97,8 @@ Answer with 'OK' if you understand this.`,
 			)
 
 			// start creating a pseudo conversation
-			filesToUpdate, _ := chat.AppendTextFilesAsPseudoConversation(files)
+			filesToUpdate, _, err := chat.AppendTextFilesAsPseudoConversation(files)
+			app.CheckIfError(err)
 
 			// setup final message and instructions
 			{

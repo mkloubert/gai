@@ -23,8 +23,12 @@
 package utils
 
 import (
+	"archive/zip"
 	"bytes"
 	"encoding/base64"
+	"encoding/csv"
+	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"image"
@@ -34,6 +38,11 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/ledongthuc/pdf"
+	"github.com/microcosm-cc/bluemonday"
+	"github.com/xuri/excelize/v2"
 
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/tiff"
@@ -98,8 +107,9 @@ func DataURIToBytes(dataURI string) ([]byte, error) {
 
 // DetectMime is an extension of `http.DetectContentType`.
 func DetectMime(b []byte) string {
-	// HEIC & co.
 	if len(b) >= 12 {
+		// HEIC & co.
+
 		if bytes.Equal(b[4:8], []byte("ftyp")) {
 			brand := string(b[8:12])
 			switch brand {
@@ -111,9 +121,277 @@ func DetectMime(b []byte) string {
 				return "image/avif"
 			}
 		}
+	} else if len(b) >= 8 {
+		// old Excel format
+
+		header := b[0:8]
+		magic := []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
+
+		if bytes.Equal(header, magic) {
+			return "application/vnd.ms-excel"
+		}
+	}
+
+	isXLSXFile, err := IsXLSX(b)
+	if err == nil {
+		if isXLSXFile {
+			return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+		}
+	}
+
+	isPPTXFile, err := IsPPTX(b)
+	if err == nil {
+		if isPPTXFile {
+			return "application/vnd.openxmlformats-officedocument.presentationml.presentation"
+		}
+	}
+
+	isDOCXFile, err := IsDOCX(b)
+	if err == nil {
+		if isDOCXFile {
+			return "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+		}
 	}
 
 	return http.DetectContentType(b)
+}
+
+// EnsurePlainText keeps sure that input `data`
+// becomes plain text.
+func EnsurePlainText(data []byte) (string, error) {
+	mimeType := DetectMime(data)
+
+	if strings.HasSuffix(mimeType, "/vnd.openxmlformats-officedocument.presentationml.presentation") {
+		// PowerPoint PPTX
+
+		r := bytes.NewReader(data)
+
+		size := int64(len(data))
+
+		z, err := zip.NewReader(r, size)
+		if err != nil {
+			return "", err
+		}
+
+		texts := make([]string, 0)
+		getJoinedText := func() string {
+			return strings.Join(texts, "\n\n\n")
+		}
+
+		for _, f := range z.File {
+			if !(strings.HasPrefix(f.Name, "ppt/slides/slide") && strings.HasSuffix(f.Name, ".xml")) {
+				continue
+			}
+
+			rc, err := f.Open()
+			if err != nil {
+				continue
+			}
+			rc.Close()
+
+			buf := new(bytes.Buffer)
+			_, err = io.Copy(buf, rc)
+			if err != nil {
+				continue
+			}
+
+			text := &strings.Builder{}
+
+			// extract all <a:t>...</a:t>
+			decoder := xml.NewDecoder(bytes.NewReader(buf.Bytes()))
+			for {
+				t, err := decoder.Token()
+				if err == io.EOF {
+					break
+				}
+				if err != nil {
+					break
+				}
+
+				switch se := t.(type) {
+				case xml.StartElement:
+					if se.Name.Local == "t" {
+						// Text-Tag gefunden
+						var innerText string
+						decoder.DecodeElement(&innerText, &se)
+
+						text.WriteString(innerText)
+						text.WriteString("\n")
+					}
+				}
+			}
+
+			texts = append(texts, text.String())
+		}
+
+		return getJoinedText(), nil
+	} else if strings.HasSuffix(mimeType, "/vnd.openxmlformats-officedocument.wordprocessingml.document") {
+		// Word DOCX
+
+		r := bytes.NewReader(data)
+
+		size := int64(len(data))
+
+		z, err := zip.NewReader(r, size)
+		if err != nil {
+			return "", err
+		}
+
+		var docXMLFile *zip.File
+
+		for _, f := range z.File {
+			if f.Name == "word/document.xml" {
+				docXMLFile = f
+				break
+			}
+		}
+
+		texts := make([]string, 0)
+		getJoinedText := func() string {
+			return strings.Join(texts, "\n\n\n")
+		}
+
+		if docXMLFile != nil {
+			rc, err := docXMLFile.Open()
+			if err == nil {
+				// XML could be opened
+				defer rc.Close()
+
+				buf := &bytes.Buffer{}
+				_, err = io.Copy(buf, rc)
+				if err == nil {
+					// data from XML could be copied
+					decoder := xml.NewDecoder(buf)
+
+					// collect text
+					var text strings.Builder
+					for {
+						t, err := decoder.Token()
+						if err == io.EOF {
+							break // ignore errors
+						}
+						if err != nil {
+							break // ignore errors
+						}
+
+						switch se := t.(type) {
+						case xml.CharData:
+							// only the text
+							text.WriteString(string(se))
+						}
+					}
+
+					texts = append(texts, text.String())
+				}
+			}
+		}
+
+		return getJoinedText(), nil
+	} else if strings.HasSuffix(mimeType, "/vnd.openxmlformats-officedocument.spreadsheetml.sheet") || strings.HasSuffix(mimeType, "/vnd.ms-excel") {
+		// Excel
+
+		r := bytes.NewReader(data)
+
+		f, err := excelize.OpenReader(r)
+		if err != nil {
+			return "", err
+		}
+
+		defer f.Close()
+
+		texts := make([]string, 0)
+		getJoinedText := func() string {
+			return strings.Join(texts, "\n\n\n")
+		}
+
+		sheets := f.GetSheetList()
+		for _, s := range sheets {
+			buff := &bytes.Buffer{}
+
+			sheetName := s
+
+			jsonData, err := json.Marshal(&sheetName)
+			if err == nil {
+				sheetName = string(jsonData)
+			} else {
+				sheetName = fmt.Sprintf(`"%s"`, sheetName)
+			}
+
+			rows, err := f.GetRows(s)
+			if err != nil {
+				return getJoinedText(), err
+			}
+
+			writer := csv.NewWriter(buff)
+
+			for _, record := range rows {
+				err := writer.Write(record)
+				if err != nil {
+					return getJoinedText(), err
+				}
+			}
+
+			writer.Flush()
+
+			err = writer.Error()
+			if err != nil {
+				return getJoinedText(), err
+			}
+
+			texts = append(texts, buff.String())
+		}
+
+		return getJoinedText(), nil
+	} else if strings.HasSuffix(mimeType, "/htm") || strings.HasSuffix(mimeType, "/html") {
+		// HTML
+
+		r := bytes.NewReader(data)
+
+		doc, err := goquery.NewDocumentFromReader(r)
+		if err == nil {
+			var sel *goquery.Selection
+
+			body := doc.Has("body")
+			if body != nil {
+				sel = body.Contents()
+			} else {
+				sel = doc.Contents()
+			}
+
+			if sel != nil {
+				sanitized := bluemonday.UGCPolicy().Sanitize(sel.Text())
+
+				return strings.TrimSpace(sanitized), nil
+			}
+		}
+	} else if strings.HasSuffix(mimeType, "/pdf") {
+		// PDF
+
+		r := bytes.NewReader(data)
+
+		size := int64(len(data))
+
+		pdf, err := pdf.NewReader(r, size)
+		if err != nil {
+			return "", err
+		}
+
+		b, err := pdf.GetPlainText()
+		if err != nil {
+			return "", err
+		}
+
+		var buf bytes.Buffer
+		defer buf.Reset()
+
+		_, err = buf.ReadFrom(b)
+		if err != nil {
+			return "", err
+		}
+		return buf.String(), err
+	}
+
+	return string(data), nil
 }
 
 // EnsurePNG ensures having a image in PNG format.
@@ -153,6 +431,55 @@ func GetPartsOfDataURI(dataURI string) (string, string, error) {
 	return base64Data, strings.TrimSpace(
 		strings.ToLower(mimeParts[0]),
 	), nil
+}
+
+// IsDOCX checks if `data` contains a Word file in DOCX format.
+func IsDOCX(data []byte) (bool, error) {
+	return IsOfficeFile(data, "word")
+}
+
+// IsOfficeFile checks if `data` contains is file in Office format.
+func IsOfficeFile(data []byte, folderName string) (bool, error) {
+	r := bytes.NewReader(data)
+
+	size := int64(len(data))
+
+	z, err := zip.NewReader(r, size)
+	if err != nil {
+		return false, err
+	}
+
+	foundContentTypes := false
+	foundFolder := false
+
+	for _, f := range z.File {
+		fullFolderName := fmt.Sprintf("%s/", folderName)
+
+		// need this file
+		if f.Name == "[Content_Types].xml" {
+			foundContentTypes = true
+		}
+		// need a file in `folderName`
+		if len(f.Name) > len(fullFolderName) && strings.HasPrefix(f.Name, fullFolderName) {
+			foundFolder = true
+		}
+
+		if foundContentTypes && foundFolder {
+			return true, nil // seems to be a Office file
+		}
+	}
+
+	return false, nil
+}
+
+// IsPPTX checks if `data` contains a PowerPoint file in PPTX format.
+func IsPPTX(data []byte) (bool, error) {
+	return IsOfficeFile(data, "ppt")
+}
+
+// IsXLSX checks if `data` contains a Excel file in XLSX format.
+func IsXLSX(data []byte) (bool, error) {
+	return IsOfficeFile(data, "xl")
 }
 
 // ReadImageFromBuffer reads an `image.Image` instance from byte array with a `types.ImageDecode` function.

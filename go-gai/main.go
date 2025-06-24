@@ -72,6 +72,7 @@ func main() {
 	flags.StringVarP(&app.OutputFile, "output", "o", "", "write output to this file")
 	flags.StringVarP(&app.SystemPrompt, "system", "s", "", "custom system prompt")
 	flags.StringVarP(&app.SystemRole, "system-role", "", "", "custom name/id of the system role")
+	flags.StringVarP(&app.TempDirectory, "temp", "", "", "custom temp directory")
 	flags.Float64VarP(&app.Temperature, "temperature", "t", -1, "custom temperature value")
 	flags.StringVarP(&app.TerminalFormatter, "terminal-formatter", "", "", "custom terminal formatter")
 	flags.StringVarP(&app.TerminalStyle, "terminal-style", "", "", "custom terminal style")

@@ -33,6 +33,20 @@ import (
 	"strings"
 )
 
+// CreateTemp creates a new temporary file.
+func (app *AppContext) CreateTemp(pattern string) (*os.File, error) {
+	tempDir := strings.TrimSpace(app.TempDirectory) // first try flags
+	if tempDir == "" {
+		tempDir = strings.TrimSpace(app.GetEnv("GAI_TEMP")) // then the env vars
+	}
+
+	if tempDir != "" {
+		tempDir = app.GetFullPath(tempDir)
+	}
+
+	return os.CreateTemp(tempDir, pattern)
+}
+
 func (app *AppContext) getBestChromaFormatterName() string {
 	terminalFormatter := strings.TrimSpace(app.TerminalFormatter)
 	if terminalFormatter == "" {
@@ -116,7 +130,7 @@ func (app *AppContext) GetInput(args []string) (string, error) {
 		}
 
 		// create a temporary file
-		tmpFile, err := os.CreateTemp("", "gai")
+		tmpFile, err := app.CreateTemp("gai-input*.txt")
 		if err != nil {
 			return err
 		}
