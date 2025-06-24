@@ -35,6 +35,11 @@
    gai --help
    ```
 
+## Supported AI Providers
+
+- **OpenAI**: Requires an API key set via `OPENAI_API_KEY` environment variable or `--api-key` flag.
+- **Ollama**: Requires Ollama server running locally or accessible via configured base URL.
+
 ## Commands and Sub-Commands
 
 ### 1. `analize` (alias: `a`)
@@ -224,11 +229,10 @@ Update resources such as source code files.
   **Description:**
   Sends the content of the specified files and a task description to the AI, which returns updated file contents along with explanations. The tool then writes the updates back to the files.
 
-## Supported Environment Variables and CLI Flags
+## Environment Variables
 
 | Environment Variable     | CLI Flag(s)            | Description                                    | Example                            |
 | ------------------------ | ---------------------- | ---------------------------------------------- | ---------------------------------- |
-| `GAI_API_KEY`            | `--api-key`, `-k`      | Global API key for AI provider                 | `--api-key=sk-xxxx`                |
 | `GAI_BASE_URL`           | `--base-url`, `-u`     | Custom base URL for AI API                     | `--base-url=https://api.custom`    |
 | `GAI_CONTEXT`            | `--context`, `-c`      | Name of the current AI context                 | `--context=projectX`               |
 | `GAI_DEFAULT_CHAT_MODEL` | `--model`, `-m`        | Default AI chat model (format: provider:model) | `--model=openai:gpt-4.1`           |
@@ -241,51 +245,109 @@ Update resources such as source code files.
 | `GAI_INPUT_SEPARATOR`    |                        | Separator used when concatenating inputs       | `" "`                              |
 | `GAI_MAX_TOKENS`         | `--max-tokens`         | Maximum number of tokens to use                | `--max-tokens=1000`                |
 | `GAI_OUTPUT_FILE`        | `--output`, `-o`       | File to write output to                        | `--output=result.txt`              |
+| `GAI_SCHEMA_FILE`        | `--schema`             | File with response format/schema               | `--schema=response.json`           |
+| `GAI_SCHEMA_NAME`        | `--schema-name`        | Name of the response format/schema             | `--schema-name=MySchema`           |
 | `GAI_SKIP_ENV_FILES`     | `--skip-env-files`     | Skip loading default `.env` files              | `--skip-env-files`                 |
 | `GAI_SYSTEM_PROMPT`      | `--system`, `-s`       | Custom system prompt for AI                    | `--system="You are a helpful AI"`  |
 | `GAI_SYSTEM_ROLE`        | `--system-role`        | Custom name/id of the system role              | `--system-role=system`             |
 | `GAI_TEMP`               | `--temp`               | Custom temp folder                             | `--temp=./my-temp-folder`          |
 | `GAI_TERMINAL_FORMATTER` | `--terminal-formatter` | Custom terminal formatter for output           | `--terminal-formatter=terminal16m` |
 | `GAI_TERMINAL_STYLE`     | `--terminal-style`     | Custom terminal style for output               | `--terminal-style=dracula`         |
-| `GAI_TEMPERATURE`        | `--temperature`, `-t`  | Temperature value for AI responses             | `--temperature=0.7`                |
+| `OPENAI_API_KEY`         | `--api-key`, `-k`      | API key for OpenAI provider                    | `OPENAI_API_KEY=sk-xxxx`           |
 
-## Supported Global CLI Flags
+## Database Support and Usage
 
-| Name                   | Description                          | Example                            |
-| ---------------------- | ------------------------------------ | ---------------------------------- |
-| `--api-key`, `-k`      | Global API key for AI provider       | `--api-key=sk-xxxx`                |
-| `--base-url`, `-u`     | Custom base URL for AI API           | `--base-url=https://api.custom`    |
-| `--context`, `-c`      | Name of the current AI context       | `--context=projectX`               |
-| `--cwd`                | Current working directory            | `--cwd=/path/to/dir`               |
-| `--edit`               | Open editor                          | `--edit`                           |
-| `--editor`             | Custom editor command                | `--editor=vim`                     |
-| `--eol`                | Custom EOL char sequence             | `--eol="\n"`                       |
-| `--env-file`, `-e`     | One or more env files to load        | `--env-file=.env.local`            |
-| `--file`, `-f`         | One or more files to use             | `--file=main.go`                   |
-| `--files`              | One or more file patterns to use     | `--files=*.go`                     |
-| `--home`               | User's home directory                | `--home=/home/user`                |
-| `--skip-env-files`     | Do not load default .env files       | `--skip-env-files`                 |
-| `--max-tokens`         | Maximum number of tokens             | `--max-tokens=1000`                |
-| `--model`, `-m`        | Default chat model                   | `--model=openai:gpt-4.1`           |
-| `--output`, `-o`       | Write output to this file            | `--output=result.txt`              |
-| `--system`, `-s`       | Custom system prompt                 | `--system="You are a helpful AI"`  |
-| `--system-role`        | Custom name/id of the system role    | `--system-role=system`             |
-| `--temperature`, `-t`  | Custom temperature value             | `--temperature=0.7`                |
-| `--terminal-formatter` | Custom terminal formatter for output | `--terminal-formatter=terminal16m` |
-| `--terminal-style`     | Custom terminal style for output     | `--terminal-style=dracula`         |
-| `--verbose`            | Verbose output                       | `--verbose`                        |
+The tool supports SQLite databases for storing image descriptions and possibly other data.
 
-## Additional Notes
+- Configure the database path or URI using the `--database` flag or `GAI_DATABASE` environment variable.
+- The database stores image metadata including file path, size, last modified time, title, description, and tags.
 
-- The tool supports multiple AI providers, including OpenAI and Ollama.
-- Conversations and context are stored locally in YAML files under the user's home directory.
-- The tool supports syntax highlighting for output when run in a terminal.
-- Editor integration allows editing prompts or inputs in your preferred text editor.
-- Environment variables can be used to set default values for CLI flags.
+## Editor Integration
 
-## License
+- Use the `--edit` flag to open your preferred text editor for input.
+- Customize the editor command with the `--editor` flag or `GAI_EDITOR` environment variable.
+
+## Conversation Storage and Management
+
+- Conversations are stored locally in YAML files under the `.gai` directory in your home folder.
+- Use `list conversation` to view the current conversation.
+- Use `reset conversation` to clear the current conversation context.
+- Context switching is supported via the `--context` flag or `GAI_CONTEXT` environment variable.
+
+## Output Formatting and Highlighting
+
+- Syntax highlighting is enabled by default when outputting to a terminal.
+- Disable highlighting with the `--no-highlight` flag.
+- Customize output appearance using `--terminal-formatter` and `--terminal-style` flags or corresponding environment variables.
+
+## Input Sources and Order
+
+- Input can be provided via command-line arguments, standard input, or an editor.
+- Configure the order of input sources with the `GAI_INPUT_ORDER` environment variable (e.g., `args,stdin,editor`).
+- Configure the separator used when concatenating inputs with the `GAI_INPUT_SEPARATOR` environment variable.
+
+## Error Handling and Debugging
+
+- Enable verbose/debug output with the `--verbose` flag.
+- Debug logs provide detailed information about command execution and internal operations.
+
+## Examples for All Commands
+
+### Init Code
+
+```bash
+gai init code myproject "Create a new Go web server project."
+```
+
+### Describe Images with Database Usage
+
+```bash
+gai describe images --file photo.jpg --database ./images.db "What is in this image?"
+```
+
+### Update Code with File Updates
+
+```bash
+gai update code --file main.go "Refactor this code to improve readability."
+```
+
+### Prompt Command Usage with Files
+
+```bash
+gai prompt --file prompt.txt "Write a poem about the sea."
+```
+
+### List Subcommands Usage with Flags
+
+```bash
+gai list env --no-sort
+```
+
+```bash
+gai list files --file main.go --with-types
+```
+
+## Supported File Types and Formats
+
+- Images: JPEG, PNG, GIF, BMP, TIFF, WebP, HEIC, HEIF, AVIF
+- Audio: MP3, WAV
+- Documents: DOCX, PPTX, XLSX, PDF, HTML
+
+## License and Contribution Guidelines
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+Contributions are welcome! Please open issues or pull requests on the [GitHub repository](https://github.com/mkloubert/gai).
+
+## Known Issues and Limitations
+
+- Some file formats may have limited support or require external dependencies.
+- Ollama provider requires a running Ollama server.
+- OpenAI usage requires a valid API key and may incur costs.
+
+## Contact and Support
+
+For support, issue reporting, or contact, please use the [GitHub repository](https://github.com/mkloubert/gai) issues section or contact Marcel Joachim Kloubert via GitHub.
 
 ---
 
