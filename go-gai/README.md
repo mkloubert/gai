@@ -56,6 +56,19 @@ Analyze resources such as source code files.
   **Description:**
   This command reads the content of the specified files, sends them to the AI for analysis, and returns detailed explanations. It supports multiple files and integrates their context for a comprehensive analysis.
 
+- **`text` (aliases: `t`, `txt`)**
+
+  Analyze text files specified by `--file` or `--files` flags.
+
+  **Usage:**
+
+  ```
+  gai analize text --file document.txt "Summarize the key points."
+  ```
+
+  **Description:**
+  This command reads text files, sends their content to the AI for analysis, and returns detailed explanations.
+
 ### 2. `chat` (alias: `c`)
 
 Interact with AI via chat.
@@ -161,6 +174,7 @@ List various resources related to the app.
   **Flags:**
 
   - `--full`: Show full file paths.
+  - `--with-types`: Show mime types of files.
 
 ### 6. `prompt` (alias: `p`)
 
@@ -230,6 +244,7 @@ Update resources such as source code files.
 | `GAI_SKIP_ENV_FILES`     | `--skip-env-files`     | Skip loading default `.env` files              | `--skip-env-files`                 |
 | `GAI_SYSTEM_PROMPT`      | `--system`, `-s`       | Custom system prompt for AI                    | `--system="You are a helpful AI"`  |
 | `GAI_SYSTEM_ROLE`        | `--system-role`        | Custom name/id of the system role              | `--system-role=system`             |
+| `GAI_TEMP`               | `--temp`               | Custom temp folder                             | `--temp=./my-temp-folder`          |
 | `GAI_TERMINAL_FORMATTER` | `--terminal-formatter` | Custom terminal formatter for output           | `--terminal-formatter=terminal16m` |
 | `GAI_TERMINAL_STYLE`     | `--terminal-style`     | Custom terminal style for output               | `--terminal-style=dracula`         |
 | `GAI_TEMPERATURE`        | `--temperature`, `-t`  | Temperature value for AI responses             | `--temperature=0.7`                |
