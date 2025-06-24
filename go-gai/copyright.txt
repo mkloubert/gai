@@ -2,3 +2,7 @@
   https://commons.wikimedia.org/wiki/Category:BBC_voice_samples_of_males
 - sample-image-1.jpg
   https://gina.marcel-kloubert.de
+- sample-image-2.jpeg
+  https://marcel.coffee
+- sample-image-3.webp
+  https://developers.google.com/speed/webp/gallery1

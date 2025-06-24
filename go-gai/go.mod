@@ -10,6 +10,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06
 	github.com/spf13/cobra v1.9.1
+	golang.org/x/image v0.28.0
 	golang.org/x/term v0.32.0
 )
 

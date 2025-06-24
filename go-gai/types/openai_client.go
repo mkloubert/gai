@@ -132,7 +132,7 @@ func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationIte
 				return err
 			}
 
-			mimeType := http.DetectContentType(data)
+			mimeType := utils.DetectMime(data)
 
 			if strings.HasPrefix(mimeType, "image/") {
 				dataURI, err := c.AsSupportedImageFormatString(data)
@@ -157,7 +157,7 @@ func (c *OpenAIClient) appendFilesTo(item *ConversationRepositoryConversationIte
 				}
 				item.Contents = append(item.Contents, newUserImageItem)
 			} else {
-				mimeType := http.DetectContentType(data)
+				mimeType := utils.DetectMime(data)
 				encoded := base64.StdEncoding.EncodeToString(data)
 				dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
 
@@ -189,12 +189,22 @@ func (c *OpenAIClient) AsSupportedAudioFormatString(b []byte) (string, error) {
 // AsSupportedImageFormatString reads data as image and tries to convert
 // it to a supported data format as data URI.
 func (c *OpenAIClient) AsSupportedImageFormatString(b []byte) (string, error) {
-	mimeType := http.DetectContentType(b)
+	mimeType := utils.DetectMime(b)
 	encoded := base64.StdEncoding.EncodeToString(b)
 	dataURI := fmt.Sprintf("data:%s;base64,%s", mimeType, encoded)
 
 	if strings.HasPrefix(mimeType, "image/") {
-		return dataURI, nil
+		if strings.HasSuffix(mimeType, "/jpeg") || strings.HasSuffix(mimeType, "/jpg") || strings.HasSuffix(mimeType, "/png") {
+			return dataURI, nil
+		}
+
+		pngData, err := utils.EnsurePNG(b)
+		if err == nil {
+			encoded = base64.StdEncoding.EncodeToString(pngData)
+			dataURI = fmt.Sprintf("data:%s;base64,%s", "image/png", encoded)
+		}
+
+		return dataURI, err
 	}
 	return dataURI, fmt.Errorf("mime type '%v' is not a supported image format", mimeType)
 }

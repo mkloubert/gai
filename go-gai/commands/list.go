@@ -24,11 +24,13 @@ package commands
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 
 	"github.com/joho/godotenv"
 	"github.com/mkloubert/gai/types"
+	"github.com/mkloubert/gai/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -104,6 +106,7 @@ func init_list_env_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	var fullPath bool
+	var withTypes bool
 
 	var listFilesCmd = &cobra.Command{
 		Use:   "files",
@@ -123,10 +126,23 @@ func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				} else {
 					relPath, err := filepath.Rel(app.WorkingDirectory, f)
 					if err != nil {
-						app.Writeln(fmt.Sprintf("WARN: %s", err.Error()))
+						app.WriteErrorString(fmt.Sprintf("WARN: %s%s", err.Error(), app.EOL))
+
 						app.WriteString(f)
 					} else {
 						app.WriteString(relPath)
+					}
+				}
+
+				if withTypes {
+					data, err := os.ReadFile(f)
+					if err != nil {
+						app.WriteErrorString(fmt.Sprintf("ERROR: %s", err.Error()))
+					} else {
+						mimeType := utils.DetectMime(data)
+
+						app.WriteString("\t")
+						app.WriteString(mimeType)
 					}
 				}
 			}
@@ -134,6 +150,7 @@ func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	}
 
 	listFilesCmd.Flags().BoolVarP(&fullPath, "full", "", false, "full path")
+	listFilesCmd.Flags().BoolVarP(&withTypes, "with-types", "", false, "with mime types")
 
 	parentCmd.AddCommand(
 		listFilesCmd,

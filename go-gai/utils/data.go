@@ -23,11 +23,61 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"image"
+	"image/gif"
+	"image/jpeg"
+	"image/png"
+	"io"
+	"net/http"
 	"strings"
+
+	"golang.org/x/image/bmp"
+	"golang.org/x/image/tiff"
+	"golang.org/x/image/webp"
 )
+
+// ImageDecode describes a function that reads data from
+// an `io.Reader` and create an `image.Image` instance if possible.
+type ImageDecode = func(r io.Reader) (image.Image, error)
+
+// ImageEncode describes a function that encodes an `img`
+// to a byte array if possible.
+type ImageEncode = func(img image.Image) ([]byte, error)
+
+// ConvertImage converts an image to a specific type.
+func ConvertImage(data []byte, encode ImageEncode) ([]byte, error) {
+	mimeType := DetectMime(data)
+
+	var decode ImageDecode = nil
+
+	if strings.HasSuffix(mimeType, "/jpeg") || strings.HasSuffix(mimeType, "/jpg") {
+		decode = jpeg.Decode
+	} else if strings.HasSuffix(mimeType, "/webp") {
+		decode = webp.Decode
+	} else if strings.HasSuffix(mimeType, "/png") {
+		decode = png.Decode
+	} else if strings.HasSuffix(mimeType, "/bmp") {
+		decode = bmp.Decode
+	} else if strings.HasSuffix(mimeType, "/gif") {
+		decode = gif.Decode
+	} else if strings.HasSuffix(mimeType, "/tiff") {
+		decode = tiff.Decode
+	}
+
+	if decode != nil {
+		img, err := ReadImageFromBuffer(decode, data)
+		if err != nil {
+			return data, err
+		}
+
+		return encode(img)
+	}
+	return data, fmt.Errorf("type '%s' is not supported", mimeType)
+}
 
 // DataURIToBytes converts `dataURI` to byte array.
 func DataURIToBytes(dataURI string) ([]byte, error) {
@@ -44,6 +94,45 @@ func DataURIToBytes(dataURI string) ([]byte, error) {
 		return nil, err
 	}
 	return data, nil
+}
+
+// DetectMime is an extension of `http.DetectContentType`.
+func DetectMime(b []byte) string {
+	// HEIC & co.
+	if len(b) >= 12 {
+		if bytes.Equal(b[4:8], []byte("ftyp")) {
+			brand := string(b[8:12])
+			switch brand {
+			case "heic", "heix", "hevc", "hevx":
+				return "image/heic"
+			case "mif1", "msf1":
+				return "image/heif"
+			case "avif":
+				return "image/avif"
+			}
+		}
+	}
+
+	return http.DetectContentType(b)
+}
+
+// EnsurePNG ensures having a image in PNG format.
+func EnsurePNG(data []byte) ([]byte, error) {
+	mimeType := DetectMime(data)
+
+	if strings.HasSuffix(mimeType, "/png") {
+		return data, nil
+	}
+
+	encodeImage := func(img image.Image) ([]byte, error) {
+		writer := &bytes.Buffer{}
+
+		err := png.Encode(writer, img)
+
+		return writer.Bytes(), err
+	}
+
+	return ConvertImage(data, encodeImage)
 }
 
 // GetPartsOfDataURI converts returns the parts of `dataURI`.
@@ -64,4 +153,11 @@ func GetPartsOfDataURI(dataURI string) (string, string, error) {
 	return base64Data, strings.TrimSpace(
 		strings.ToLower(mimeParts[0]),
 	), nil
+}
+
+// ReadImageFromBuffer reads an `image.Image` instance from byte array with a `types.ImageDecode` function.
+func ReadImageFromBuffer(decode ImageDecode, data []byte) (image.Image, error) {
+	reader := bytes.NewReader(data)
+
+	return webp.Decode(reader)
 }
