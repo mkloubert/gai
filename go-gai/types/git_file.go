@@ -33,11 +33,17 @@ import (
 
 // GitFile handles a file in a git repository.
 type GitFile struct {
-	commit      *GitCommit
-	git         *GitClient
-	name        string
-	stageStatus string
-	status      string
+	changeStatus string
+	commit       *GitCommit
+	git          *GitClient
+	name         string
+	stageStatus  string
+	status       string
+}
+
+// ChangeStatus returns the status if changed.
+func (gf *GitFile) ChangeStatus() string {
+	return gf.changeStatus
 }
 
 // Commit returns the full path of the file.
@@ -130,6 +136,47 @@ func (gf *GitFile) IsStaged() bool {
 // Name returns the name of the file.
 func (gf *GitFile) Name() string {
 	return gf.name
+}
+
+func (gf *GitFile) Refresh() error {
+	if gf.IsStaged() {
+		cmd := exec.Command("git", "diff", "--cached", "--name-status", gf.name)
+
+		var out bytes.Buffer
+		cmd.Stdout = &out
+
+		err := cmd.Run()
+		if err != nil {
+			return err
+		}
+
+		gf.stageStatus = ""
+
+		output := strings.TrimSpace(out.String())
+		if output == "" {
+			return nil // not staged
+		}
+
+		fields := strings.Fields(output)
+		if len(fields) >= 2 {
+			gf.stageStatus = strings.ToUpper(fields[0])
+		}
+	}
+
+	return nil
+}
+
+func (gf *GitFile) Stage() error {
+	cmd := exec.Command("git", "add", gf.name)
+	_, err := cmd.CombinedOutput()
+
+	if err != nil {
+		return err
+	}
+
+	gf.status = "staged"
+
+	return gf.Refresh()
 }
 
 // StageStatus returns the status if staged.

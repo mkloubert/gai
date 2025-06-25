@@ -23,6 +23,7 @@
 package types
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"os"
@@ -70,6 +71,47 @@ func (g *GitClient) GetAllCommits() ([]*GitCommit, error) {
 	}
 
 	return commits, nil
+}
+
+// GetChangedFiles returns the list of changed files that are not staged yet.
+func (g *GitClient) GetChangedFiles() ([]*GitFile, error) {
+	changedFiles := make([]*GitFile, 0)
+
+	repoDir := g.dir
+
+	cmd := exec.Command("git", "status", "--porcelain")
+	cmd.Dir = repoDir
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		return changedFiles, err
+	}
+
+	lines := strings.SplitSeq(out.String(), "\n")
+	for line := range lines {
+		if len(line) < 4 {
+			continue
+		}
+
+		status := strings.ToUpper(line[:2])
+		file := strings.TrimSpace(line[3:])
+
+		// " M" = changed in working directory, "M " = changed in staging area
+		// other stati: (A, D, etc.)
+		if status == " M" || status == "MM" || status == "AM" || status == "A " || status == "D " {
+			changedFiles = append(changedFiles, &GitFile{
+				git:          g,
+				name:         file,
+				status:       "changed",
+				changeStatus: status,
+			})
+		}
+	}
+
+	return changedFiles, nil
 }
 
 // GetFiles returns list of files related to this client / repository.

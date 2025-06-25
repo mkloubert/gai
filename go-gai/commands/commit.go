@@ -30,12 +30,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sort"
 	"strings"
 
 	"github.com/mkloubert/gai/types"
 	"github.com/mkloubert/gai/utils"
 	"github.com/pkoukk/tiktoken-go"
 	"github.com/spf13/cobra"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 type commitResponse struct {
@@ -51,6 +54,8 @@ var conventionalCommitsSpec string
 
 // Init_commit_Command initializes the `chat` command.
 func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var stagedOnly bool
+
 	var commitCmd = &cobra.Command{
 		Use:   "commit",
 		Short: "Commit",
@@ -61,8 +66,63 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			git, err := app.NewGitClient()
 			app.CheckIfError(err)
 
-			stagedFiles, err := git.GetStagedFiles()
+			allStagedFiles, err := git.GetStagedFiles()
 			app.CheckIfError(err)
+
+			if len(allStagedFiles) == 0 {
+				// no staged files found, ask user for changed files to stage
+
+				changedFiles, err := git.GetChangedFiles()
+				app.CheckIfError(err)
+
+				// sort by name
+				sort.Slice(changedFiles, func(i, j int) bool {
+					return strings.ToLower(changedFiles[i].Name()) < strings.ToLower(changedFiles[j].Name())
+				})
+
+				if len(changedFiles) > 0 {
+					// ask
+
+					model := &stageChangedFilesModel{
+						items:  []stageChangedFilesModelItem{},
+						cursor: 0,
+						done:   false,
+					}
+
+					for _, cf := range changedFiles {
+						model.items = append(model.items, stageChangedFilesModelItem{
+							checked: true,
+							file:    cf,
+							label:   cf.Name(),
+						})
+					}
+
+					if !app.AlwaysYes {
+						// ask user, otherwise
+						// all changed are taken
+
+						p := tea.NewProgram(model)
+
+						_, err := p.Run()
+						app.CheckIfError(err)
+					}
+
+					for _, item := range model.items {
+						if !item.checked {
+							continue
+						}
+
+						err := item.file.Stage()
+						app.CheckIfError(err)
+
+						allStagedFiles = append(allStagedFiles, item.file)
+					}
+				}
+			}
+
+			if len(allStagedFiles) == 0 {
+				app.CheckIfError(errors.New("no changed or staged files found"))
+			}
 
 			app.InitAI()
 
@@ -81,10 +141,48 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			latestCommit, err := git.GetLatestCommit()
 			app.CheckIfError(err)
 
-			latestCommitedFiles, err := latestCommit.GetFiles()
+			allLatestCommitedFiles, err := latestCommit.GetFiles()
 			app.CheckIfError(err)
 
 			checkFile := app.NewFilePredicate()
+
+			// before we start we filter the staged files we really want
+			finalStagedFilesToTake := make([]*types.GitFile, 0)
+			for _, sf := range allStagedFiles {
+				takeFile, err := checkFile(sf.FullName())
+				app.CheckIfError(err)
+
+				if takeFile {
+					finalStagedFilesToTake = append(finalStagedFilesToTake, sf)
+				}
+			}
+
+			// then we collect the latest commit files for the context ...
+			finalLastCommitedFilesToTake := make([]*types.GitFile, 0)
+			for _, lcf := range allLatestCommitedFiles {
+				takeFile, err := checkFile(lcf.FullName())
+				app.CheckIfError(err)
+
+				if !takeFile {
+					continue
+				}
+
+				addFile := func() {
+					finalLastCommitedFilesToTake = append(finalLastCommitedFilesToTake, lcf)
+				}
+
+				if stagedOnly {
+					// ... but only the one which are are part of the staged files
+
+					for _, sf := range finalStagedFilesToTake {
+						if sf.FullName() == lcf.FullName() {
+							addFile()
+						}
+					}
+				} else {
+					addFile()
+				}
+			}
 
 			approximateSubmittedBinarySize := uint64(0)
 			approximateSubmittedTextSize := uint64(0)
@@ -97,14 +195,7 @@ Answer with 'OK' if you understand this.`,
 					Model: &model,
 					Time:  &startTime,
 				})
-			for i, lcf := range latestCommitedFiles {
-				takeFile, err := checkFile(lcf.FullName())
-				app.CheckIfError(err)
-
-				if !takeFile {
-					continue
-				}
-
+			for i, lcf := range finalLastCommitedFilesToTake {
 				if app.DryRun {
 					app.Writeln(fmt.Sprintf("File from last commit: %s", lcf.Name()))
 				}
@@ -150,8 +241,6 @@ Answer with 'OK' if you analyzed it%v.`,
 				}
 			}
 
-			stagedFilesTaken := 0
-
 			chat.AppendSimplePseudoUserConversation(`Now I continue with the list of staged files.
 Each file contains the diff (or the complete content) between the staged content and the latest commit based on the current state status.
 Answer with 'OK' if you understand this.`,
@@ -159,19 +248,10 @@ Answer with 'OK' if you understand this.`,
 					Model: &model,
 					Time:  &startTime,
 				})
-			for i, sf := range stagedFiles {
-				takeFile, err := checkFile(sf.FullName())
-				app.CheckIfError(err)
-
-				if !takeFile {
-					continue
-				}
-
+			for i, sf := range finalStagedFilesToTake {
 				if app.DryRun {
 					app.Writeln(fmt.Sprintf("Staged file: %s", sf.Name()))
 				}
-
-				stagedFilesTaken += 1
 
 				currentContent, err := sf.GetCurrentContent()
 				app.CheckIfError(err)
@@ -299,10 +379,6 @@ Answer with 'OK' if you analyzed it%v.`,
 						app.Writeln(fmt.Sprintf("Approximate GPT tokens for text content transfered: %d", len(tokens)))
 					}
 				}
-			}
-
-			if stagedFilesTaken == 0 {
-				app.CheckIfError(errors.New("no files staged files found"))
 			}
 
 			responseSchema, responseSchemaName, err := app.GetResponseSchema()
@@ -474,6 +550,7 @@ Below is the full Conventional Commits specification for your reference. Always 
 
 	app.WithDryRunCliFlags(commitCmd)
 	app.WithYesCliFlags(commitCmd)
+	commitCmd.Flags().BoolVarP(&stagedOnly, "staged-only", "", false, "only submit staged files for comparsion")
 
 	parentCmd.AddCommand(
 		commitCmd,
