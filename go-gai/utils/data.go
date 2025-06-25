@@ -433,6 +433,18 @@ func GetPartsOfDataURI(dataURI string) (string, string, error) {
 	), nil
 }
 
+// MaybeBinary checks if data maybe binary / non-printable.
+func MaybeBinary(data []byte) bool {
+	// check for non-printable chars except whitespaces
+	for _, b := range data {
+		if (b == 0) || (b < 7 || (b > 13 && b < 32)) {
+			return true // maybe binary
+		}
+	}
+
+	return false
+}
+
 // IsDOCX checks if `data` contains a Word file in DOCX format.
 func IsDOCX(data []byte) (bool, error) {
 	return IsOfficeFile(data, "word")

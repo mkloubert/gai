@@ -101,6 +101,8 @@ func (app *AppContext) Init() {
 
 	app.loadEnvFilesIfExist()
 
+	app.loadRCFile()
+
 	outputFile := app.GetOutputFile()
 	if outputFile != "" {
 		file, err := os.OpenFile(outputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)

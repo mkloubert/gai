@@ -28,6 +28,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -41,6 +42,8 @@ import (
 type AppContext struct {
 	// AI is the default AI client.
 	AI AIClient
+	// AlwaysYes is `true` if command should answer any user interactions with "yes".
+	AlwaysYes bool
 	// ApiKey stores a global API key.
 	ApiKey string
 	// BaseUrl stores base URL.
@@ -49,6 +52,8 @@ type AppContext struct {
 	Context string
 	// Database stores the path or URI to the database, usually a SQLite database.
 	Database string
+	// DryRun is `true` if command should be run in "dry run mode".
+	DryRun bool
 	// Editor stores the command for the custom editor to use.
 	Editor string
 	// EnvFiles stores list of additional .env files that should be loaded in this direction.
@@ -77,6 +82,8 @@ type AppContext struct {
 	OutputFile string
 	// OutputLanguage stores the output language.
 	OutputLanguage string
+	// RCFile stores current `.gairc` file.
+	RCFile *GAIRCFile
 	// RootCommand stores the root command.
 	RootCommand *cobra.Command
 	// SchemaFile stores the path to the file with the response format/schema.
@@ -167,10 +174,12 @@ func (app *AppContext) GetCurrentContext() string {
 // GetFiles() returns the cleaned up and unsorted list of files as
 // full paths from `Files`.
 func (app *AppContext) GetFiles() ([]string, error) {
+	fileFlag, filesFlag := app.GetFileFlags()
+
 	files := make([]string, 0)
 
 	// first check for explicit file pathes
-	for _, f := range app.Files {
+	for _, f := range fileFlag {
 		file := f
 		if !filepath.IsAbs(file) {
 			file = filepath.Join(app.WorkingDirectory, file)
@@ -182,7 +191,7 @@ func (app *AppContext) GetFiles() ([]string, error) {
 	// now the ones with patterns ...
 
 	globPatterns := make([]string, 0)
-	for _, fp := range app.FilePatterns {
+	for _, fp := range filesFlag {
 		if strings.TrimSpace(fp) != "" {
 			globPatterns = append(globPatterns, fp)
 		}
@@ -252,6 +261,60 @@ func (app *AppContext) GetISOTime() string {
 // GetNow() returns current timestamp in UTC format.
 func (app *AppContext) GetNow() time.Time {
 	return time.Now().UTC()
+}
+
+// NewFilePredicate creates a new function that checks if a file path matches a specific pattern.
+func (app *AppContext) NewFilePredicate() func(f string) (bool, error) {
+	fileFlag, filesFlag := app.GetFileFlags()
+
+	explicitFiles := make([]string, 0)
+
+	// first check for explicit file pathes
+	for _, f := range fileFlag {
+		file := f
+		if !filepath.IsAbs(file) {
+			file = filepath.Join(app.WorkingDirectory, file)
+		}
+
+		explicitFiles = append(explicitFiles, file)
+	}
+
+	globPatterns := make([]string, 0)
+	for _, fp := range filesFlag {
+		if strings.TrimSpace(fp) != "" {
+			globPatterns = append(globPatterns, fp)
+		}
+	}
+	globPatterns = utils.RemoveDuplicateStrings(globPatterns)
+
+	if len(explicitFiles) == 0 && len(globPatterns) == 0 {
+		// nothing defined => allow all
+
+		return func(f string) (bool, error) {
+			return true, nil
+		}
+	}
+
+	gitignore := ignore.CompileIgnoreLines(globPatterns...)
+
+	return func(f string) (bool, error) {
+		absPath := f
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(app.WorkingDirectory)
+		}
+
+		if slices.Contains(explicitFiles, absPath) {
+			return true, nil // explicit file found
+		}
+
+		relPath, err := filepath.Rel(app.WorkingDirectory, f)
+		if err != nil {
+			return false, err
+		}
+
+		// check glob patterns in .gitignore format
+		return gitignore.MatchesPath(relPath), nil
+	}
 }
 
 // Run runs the application.

@@ -140,8 +140,8 @@ After this, the user will submit their question or query, and you will follow it
 		},
 	}
 
-	app.WithChatFlags(analizeCodeCmd)
-	app.WithLanguageFlags(analizeCodeCmd)
+	app.WithChatCLIFlags(analizeCodeCmd)
+	app.WithLanguageCLIFlags(analizeCodeCmd)
 
 	parentCmd.AddCommand(
 		analizeCodeCmd,
@@ -255,8 +255,8 @@ After this, the user will submit their question or query, and you will follow it
 		},
 	}
 
-	app.WithChatFlags(analizeTextCmd)
-	app.WithLanguageFlags(analizeTextCmd)
+	app.WithChatCLIFlags(analizeTextCmd)
+	app.WithLanguageCLIFlags(analizeTextCmd)
 
 	parentCmd.AddCommand(
 		analizeTextCmd,

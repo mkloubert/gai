@@ -234,7 +234,7 @@ Always answer in %s.`,
 		},
 	}
 
-	app.WithLanguageFlags(initCodeCmd)
+	app.WithLanguageCLIFlags(initCodeCmd)
 
 	parentCmd.AddCommand(
 		initCodeCmd,

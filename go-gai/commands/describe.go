@@ -294,8 +294,8 @@ ON CONFLICT(file_path) DO UPDATE SET
 	initCodeCmd.Flags().Uint16VarP(&minTags, "min-tags", "", 1, "")
 	initCodeCmd.Flags().BoolVarP(&updateExisting, "update-existing", "", false, "")
 
-	app.WithDatabaseFlags(initCodeCmd)
-	app.WithLanguageFlags(initCodeCmd)
+	app.WithDatabaseCLIFlags(initCodeCmd)
+	app.WithLanguageCLIFlags(initCodeCmd)
 
 	parentCmd.AddCommand(
 		initCodeCmd,

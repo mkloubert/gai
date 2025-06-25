@@ -174,7 +174,7 @@ func (ctx *ChatContext) AppendTextFilesAsPseudoConversation(files []string) ([]s
 			}
 
 			added := ctx.AppendSimplePseudoUserConversation(fmt.Sprintf(
-				`This is the content of the file with the path '%s': "%s".
+				`This is the content of the file with the path '%s': %s.
 Answer with 'OK' if you analyzed it%v.`,
 				relPath,
 				jsonData,

@@ -1,0 +1,7 @@
+defaults:
+  flags:
+    file:
+      - "go.mod"
+    files:
+      - "*.go"
+      - "*.md"

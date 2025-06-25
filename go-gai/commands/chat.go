@@ -100,7 +100,7 @@ func Init_chat_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		},
 	}
 
-	app.WithChatFlags(chatCmd)
+	app.WithChatCLIFlags(chatCmd)
 	chatCmd.Flags().BoolVarP(&reset, "reset", "r", false, "reset conversation")
 
 	parentCmd.AddCommand(

@@ -215,8 +215,8 @@ Please follow the user’s instructions precisely and answer in %s.`,
 		},
 	}
 
-	app.WithChatFlags(updateCodeCmd)
-	app.WithLanguageFlags(updateCodeCmd)
+	app.WithChatCLIFlags(updateCodeCmd)
+	app.WithLanguageCLIFlags(updateCodeCmd)
 
 	parentCmd.AddCommand(
 		updateCodeCmd,

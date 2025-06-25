@@ -88,7 +88,7 @@ func Init_prompt_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		},
 	}
 
-	app.WithPromptFlags(promptCmd)
+	app.WithPromptCLIFlags(promptCmd)
 
 	parentCmd.AddCommand(
 		promptCmd,

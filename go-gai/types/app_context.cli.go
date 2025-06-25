@@ -24,13 +24,33 @@ package types
 
 import "github.com/spf13/cobra"
 
-// WithChatFlags sets up `cmd` for chat based CLI flags.
-func (app *AppContext) WithChatFlags(cmd *cobra.Command) {
-	app.WithPromptFlags(cmd)
+// GetFileFlags returns the values of `--file` and “
+func (app *AppContext) GetFileFlags() ([]string, []string) {
+	file := app.Files
+	if len(file) == 0 {
+		file = append(file, app.RCFile.Defaults.Flags.File...)
+	}
+
+	files := app.FilePatterns
+	if len(files) == 0 {
+		files = append(files, app.RCFile.Defaults.Flags.Files...)
+	}
+
+	return file, files
 }
 
-// WithDatabaseFlags sets up `cmd` for database based CLI flags.
-func (app *AppContext) WithDatabaseFlags(cmd *cobra.Command) {
+// WithChatCLIFlags sets up `cmd` for chat based CLI flags.
+func (app *AppContext) WithChatCLIFlags(cmd *cobra.Command) {
+	app.WithPromptCLIFlags(cmd)
+}
+
+// WithDryRunCliFlags sets up `cmd` for dry run based CLI flags.
+func (app *AppContext) WithDryRunCliFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&app.DryRun, "dry-run", "", false, "do a dry run")
+}
+
+// WithDatabaseCLIFlags sets up `cmd` for database based CLI flags.
+func (app *AppContext) WithDatabaseCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&app.Database, "database", "", "", "uri or path to database")
 }
 
@@ -40,25 +60,30 @@ func (app *AppContext) WithEditorCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&app.Editor, "editor", "", "", "custom editor command")
 }
 
-// WithHighlightFlags sets up `cmd` for highlight based CLI flags.
-func (app *AppContext) WithHighlightFlags(cmd *cobra.Command) {
+// WithHighlightCLIFlags sets up `cmd` for highlight based CLI flags.
+func (app *AppContext) WithHighlightCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&app.NoHighlight, "no-highlight", "", false, "do not highlight output")
 }
 
-// WithPromptFlags sets up `cmd` for language based CLI flags.
-func (app *AppContext) WithLanguageFlags(cmd *cobra.Command) {
+// WithLanguageCLIFlags sets up `cmd` for language based CLI flags.
+func (app *AppContext) WithLanguageCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&app.OutputLanguage, "language", "", "", "custom output language")
 }
 
-// WithPromptFlags sets up `cmd` for prompt based CLI flags.
-func (app *AppContext) WithPromptFlags(cmd *cobra.Command) {
+// WithPromptCLIFlags sets up `cmd` for prompt based CLI flags.
+func (app *AppContext) WithPromptCLIFlags(cmd *cobra.Command) {
 	app.WithEditorCLIFlags(cmd)
-	app.WithHighlightFlags(cmd)
-	app.WithSchemaFlags(cmd)
+	app.WithHighlightCLIFlags(cmd)
+	app.WithSchemaCLIFlags(cmd)
 }
 
-// WithSchemaFlags sets up `cmd` for (response) format based CLI flags.
-func (app *AppContext) WithSchemaFlags(cmd *cobra.Command) {
+// WithSchemaCLIFlags sets up `cmd` for (response) format based CLI flags.
+func (app *AppContext) WithSchemaCLIFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&app.SchemaFile, "schema", "", "", "file with response format/schema")
 	cmd.Flags().StringVarP(&app.SchemaName, "schema-name", "", "", "name of the response format/schema")
+}
+
+// WithYesCliFlags sets up `cmd` for "yes" based CLI flags.
+func (app *AppContext) WithYesCliFlags(cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&app.AlwaysYes, "yes", "y", false, "always yes")
 }

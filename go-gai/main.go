@@ -46,6 +46,7 @@ func main() {
 		Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			app.Init()
+
 			app.Dbg(fmt.Sprintf("Executing command '%v' ...", cmd.Name()))
 		},
 		Run: func(cmd *cobra.Command, args []string) {
@@ -81,6 +82,7 @@ func main() {
 	// Initialize commands
 	commands.Init_analize_Command(app, rootCmd)
 	commands.Init_chat_Command(app, rootCmd)
+	commands.Init_commit_Command(app, rootCmd)
 	commands.Init_describe_Command(app, rootCmd)
 	commands.Init_init_Command(app, rootCmd)
 	commands.Init_list_Command(app, rootCmd)
