@@ -119,7 +119,7 @@ type AppContext struct {
 // CheckIfError checks if `err` is not `nil` and exists in this case.
 func (app *AppContext) CheckIfError(err error) {
 	if err != nil {
-		fmt.Fprintln(app.Stderr, err)
+		app.WriteErrorString(fmt.Sprintf("%s%s", err.Error(), app.EOL))
 		os.Exit(1)
 	}
 }
