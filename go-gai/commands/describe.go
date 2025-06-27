@@ -161,22 +161,23 @@ Be objective and accurate. Do not include personal opinions or assumptions that 
 				responseSchemaName = "DescribeImageSchema"
 			}
 
-			outputError := func(err error) {
-				errorObj := &map[string]any{
-					"error": map[string]any{
-						"message": err.Error(),
-					},
-				}
-
-				data, err2 := json.Marshal(&errorObj)
-				if err2 != nil {
-					app.Writeln(err2)
-				} else {
-					app.Writeln(fmt.Sprintf("ERROR: %s", data))
-				}
-			}
-
 			for _, f := range files {
+				outputError := func(err error) {
+					errorObj := &map[string]any{
+						"file": f,
+						"error": map[string]any{
+							"message": err.Error(),
+						},
+					}
+
+					data, err2 := json.Marshal(&errorObj)
+					if err2 != nil {
+						app.Writeln(err2)
+					} else {
+						app.Writeln(fmt.Sprintf("ERROR: %s", data))
+					}
+				}
+
 				func() {
 					info, err := os.Stat(f)
 					if err != nil {
