@@ -29,7 +29,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"os/exec"
 	"sort"
 	"strings"
 
@@ -176,6 +175,8 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 				if takeFile {
 					finalStagedFilesToTake = append(finalStagedFilesToTake, sf)
+				} else {
+					app.Dbgf("Will not take staged file '%s'%s", sf.Name(), app.EOL)
 				}
 			}
 
@@ -188,6 +189,7 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				app.CheckIfError(err)
 
 				if !takeFile {
+					app.Dbgf("Will not take staged file '%s'%s", lcf.Name(), app.EOL)
 					continue
 				}
 
@@ -458,17 +460,17 @@ Below is the full Conventional Commits specification for your reference. Always 
 
 			app.Dbg("Got additional context")
 
-			message := "Write a commit message based on the Conventional Commits specification."
+			lastMessage := "Write a commit message based on the Conventional Commits specification."
 			if strings.TrimSpace(additionalContext) != "" {
 				jsonData, err := json.Marshal(&additionalContext)
 				app.CheckIfError(err)
 
-				message += fmt.Sprintf(
+				lastMessage += fmt.Sprintf(
 					"\nHere is some additional context from user as serialized JSON string: %s",
 					jsonData,
 				)
 			}
-			message += "\nYour JSON:"
+			lastMessage += "\nYour JSON:"
 
 			app.Dbg("Setup message")
 
@@ -515,94 +517,115 @@ Below is the full Conventional Commits specification for your reference. Always 
 				os.Exit(0)
 			}
 
-			chatOptions := make([]types.AIClientChatOptions, 0)
-			chatOptions = append(chatOptions, types.AIClientChatOptions{
-				NoSave:             &doNotSaveConversation,
-				ResponseSchema:     responseSchema,
-				ResponseSchemaName: &responseSchemaName,
-				SystemPrompt:       &systemPrompt,
-			})
-			answer, _, err := app.AI.Chat(chat, message, chatOptions...)
-			app.CheckIfError(err)
+			var nextRequest func() (string, error)
+			nextRequest = func() (string, error) {
+				chatOptions := make([]types.AIClientChatOptions, 0)
+				chatOptions = append(chatOptions, types.AIClientChatOptions{
+					NoSave:             &doNotSaveConversation,
+					ResponseSchema:     responseSchema,
+					ResponseSchemaName: &responseSchemaName,
+					SystemPrompt:       &systemPrompt,
+				})
+				answer, _, err := app.AI.Chat(chat, lastMessage, chatOptions...)
+				app.CheckIfError(err)
 
-			var commit commitResponse
-			err = json.Unmarshal([]byte(answer), &commit)
-			app.CheckIfError(err)
+				var commit commitResponse
+				err = json.Unmarshal([]byte(answer), &commit)
+				app.CheckIfError(err)
 
-			commitType := strings.TrimSpace(commit.Type)
-			commitScope := ""
-			if commit.Scope != nil {
-				commitScope = strings.TrimSpace(*commit.Scope)
-			}
-			commitDescription := strings.TrimSpace(commit.Description)
-			commitBody := ""
-			if commit.Body != nil {
-				commitBody = strings.TrimSpace(*commit.Body)
-			}
-			commitFooter := ""
-			if commit.Footer != nil {
-				commitFooter = strings.TrimSpace(*commit.Footer)
-			}
+				commitType := strings.TrimSpace(commit.Type)
+				commitScope := ""
+				if commit.Scope != nil {
+					commitScope = strings.TrimSpace(*commit.Scope)
+				}
+				commitDescription := strings.TrimSpace(commit.Description)
+				commitBody := ""
+				if commit.Body != nil {
+					commitBody = strings.TrimSpace(*commit.Body)
+				}
+				commitFooter := ""
+				if commit.Footer != nil {
+					commitFooter = strings.TrimSpace(*commit.Footer)
+				}
 
-			if commitScope != "" {
-				commitScope = fmt.Sprintf("(%s)", commitScope)
-			}
+				if commitScope != "" {
+					commitScope = fmt.Sprintf("(%s)", commitScope)
+				}
 
-			finalCommitMessage := strings.TrimSpace(
-				fmt.Sprintf(`%s%s: %s
+				finalCommitMessage := strings.TrimSpace(
+					fmt.Sprintf(`%s%s: %s
 
 %s
 
 %s`,
-					commitType,
-					commitScope,
-					commitDescription,
-					commitBody,
-					commitFooter,
-				),
-			)
+						commitType,
+						commitScope,
+						commitDescription,
+						commitBody,
+						commitFooter,
+					),
+				)
 
-			app.Writeln(finalCommitMessage)
-			app.Writeln()
+				app.Writeln(finalCommitMessage)
+				app.Writeln()
 
-			doCommit := app.AlwaysYes
+				doCommit := app.AlwaysYes
 
-			if doCommit {
-				app.Dbg("Will do an auto commit ...")
-			}
-
-			if !doCommit {
-				reader := bufio.NewReader(app.Stdin)
-				for {
-					app.WriteString("Commit with this message (Y/n)?: ")
-
-					input, _ := reader.ReadString('\n')
-					input = strings.TrimSpace(strings.ToLower(input))
-
-					if input == "y" || input == "yes" || input == "" {
-						doCommit = true
-						break
-					}
-					if input == "n" || input == "no" {
-						doCommit = false
-						break
-					}
-
-					app.WriteString("Please answer with 'y' (yes) or n ('no').")
+				if doCommit {
+					app.Dbg("Will do an auto commit ...")
 				}
+
+				if !doCommit {
+					reader := bufio.NewReader(app.Stdin)
+					for {
+						app.WriteString("Commit with this message [Y(es)/r(etry)/n(no)]?: ")
+
+						input, _ := reader.ReadString('\n')
+						input = strings.TrimSpace(strings.ToLower(input))
+
+						if input == "y" || input == "yes" || input == "" {
+							doCommit = true
+							break
+						}
+						if input == "r" || input == "retry" {
+							app.WriteString("Some (optional) context for the new message: ")
+
+							retryInput, _ := reader.ReadString('\n')
+							retryInput = strings.TrimSpace(retryInput)
+
+							if retryInput == "" {
+								lastMessage = "Please create a new message."
+							} else {
+								lastMessage = retryInput
+							}
+
+							return nextRequest()
+						}
+						if input == "n" || input == "no" {
+							doCommit = false
+							break
+						}
+
+						app.WriteString("Please answer with 'y' (yes), 'r' (retry) or n ('no').")
+					}
+				}
+
+				if !doCommit {
+					app.Writeln("Cancelled.")
+					os.Exit(0)
+				}
+
+				app.Writeln()
+
+				return finalCommitMessage, err
 			}
 
-			if !doCommit {
-				app.Writeln("Cancelled.")
-				os.Exit(0)
-			}
-
-			app.Writeln()
+			commitMessage, err := nextRequest()
+			app.CheckIfError(err)
 
 			app.Dbg("Running 'git commit' ...")
 
-			c := exec.Command("git", "commit", "-m", finalCommitMessage)
-			c.Dir = git.Dir()
+			c := git.CreateExecCommand("git", "commit", "-m", commitMessage)
 
 			c.Stderr = app.Stderr
 			c.Stdin = app.Stdin
