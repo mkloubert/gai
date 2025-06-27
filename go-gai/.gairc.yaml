@@ -3,6 +3,7 @@ defaults:
     file:
       - ".env"
       - "go.mod"
+      - "CONTRIBUTING.md"
       - "README.md"
     files:
       - "*.go"

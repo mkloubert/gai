@@ -55,8 +55,14 @@ func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 			app.InitAI()
 
+			model := app.AI.ChatModel()
+
+			app.Dbgf("Initialized AI with model %s%s", model, app.EOL)
+
 			files, err := app.GetFiles()
 			app.CheckIfError(err)
+
+			app.Dbgf("Found %d files%s", len(files), app.EOL)
 
 			if len(files) == 0 {
 				app.CheckIfError(errors.New("no files found or defined"))
@@ -65,8 +71,12 @@ func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			responseSchema, responseSchemaName, err := app.GetResponseSchema()
 			app.CheckIfError(err)
 
+			app.Dbg("Loaded response schema")
+
 			message, err := app.GetInput(args)
 			app.CheckIfError(err)
+
+			app.Dbgf("Loaded message from user with a size of %d%s", len(message), app.EOL)
 
 			message = strings.TrimSpace(message)
 			if message == "" {
@@ -84,7 +94,7 @@ func init_update_code_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			chat, err := app.NewChatContext(contextOptions...)
 			app.CheckIfError(err)
 
-			model := app.AI.ChatModel()
+			app.Dbg("Loaded response schema")
 
 			// user explaination
 			chat.AppendSimplePseudoUserConversation(`I will start by submitting each file with its contents as serialized JSON strings.  
@@ -99,6 +109,8 @@ Answer with 'OK' if you understand this.`,
 			// start creating a pseudo conversation
 			filesToUpdate, _, err := chat.AppendTextFilesAsPseudoConversation(files)
 			app.CheckIfError(err)
+
+			app.Dbg("Created pseudo conversation")
 
 			// setup final message and instructions
 			{
@@ -124,6 +136,8 @@ Your JSON:`,
 
 				chat.AppendConversationItem(userMessage)
 			}
+
+			app.Dbg("Setup final user message")
 
 			if responseSchema == nil {
 				// build default schema
@@ -159,12 +173,19 @@ Your JSON:`,
 						},
 					},
 				}
+			} else {
+				app.Dbg("Using custom response schema")
 			}
+
 			if strings.TrimSpace(responseSchemaName) == "" {
 				responseSchemaName = "FileUpdateSchema"
+			} else {
+				app.Dbgf("Response schema name: %s%s", responseSchemaName, app.EOL)
 			}
 
 			outputLanguage := strings.TrimSpace(app.OutputLanguage)
+
+			app.Dbgf("Output language: %s%s", outputLanguage, app.EOL)
 
 			langInfo := "same language as input"
 			if outputLanguage != "" {
@@ -177,6 +198,8 @@ After all relevant files have been submitted, the user will send a question or r
 Please follow the user’s instructions precisely and answer in %s.`,
 				langInfo)
 
+			app.Dbgf("Doing AI chat with %s ...%s", app.AI.Provider(), app.EOL)
+
 			chatOptions := make([]types.AIClientChatOptions, 0)
 			chatOptions = append(chatOptions, types.AIClientChatOptions{
 				NoSave:             &doNotSaveConversation,
@@ -186,6 +209,8 @@ Please follow the user’s instructions precisely and answer in %s.`,
 			})
 			answer, _, err := app.AI.Chat(chat, message, chatOptions...)
 			app.CheckIfError(err)
+
+			app.Dbg("Marshalling response ...")
 
 			var updateResponse updateCodeResponse
 			err = json.Unmarshal([]byte(answer), &updateResponse)
