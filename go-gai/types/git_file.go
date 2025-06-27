@@ -26,7 +26,6 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 )
@@ -53,7 +52,9 @@ func (gf *GitFile) Commit() *GitCommit {
 
 // CompareWith returns the diff of the file based on a specific commit.
 func (gf *GitFile) CompareWith(c *GitCommit) (string, error) {
-	cmd := exec.Command("git", "diff", "--cached", c.hash, "--", gf.name)
+	git := gf.git
+
+	cmd := git.CreateExecCommand("git", "diff", "--cached", c.hash, "--", gf.name)
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -75,8 +76,7 @@ func (gf *GitFile) GetContent() ([]byte, error) {
 	git := gf.git
 
 	if gf.IsStaged() {
-		cmd := exec.Command("git", "show", ":"+gf.name)
-		cmd.Dir = git.dir
+		cmd := git.CreateExecCommand("git", "show", ":"+gf.name)
 
 		out := &bytes.Buffer{}
 		cmd.Stdout = out
@@ -103,8 +103,7 @@ func (gf *GitFile) GetLatestContent() ([]byte, error) {
 		return nil, err
 	}
 
-	cmd := exec.Command("git", "show", fmt.Sprintf("%s:%s", latestCommit.hash, gf.name))
-	cmd.Dir = git.dir
+	cmd := git.CreateExecCommand("git", "show", fmt.Sprintf("%s:%s", latestCommit.hash, gf.name))
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -128,6 +127,11 @@ func (gf *GitFile) GetLatestContent() ([]byte, error) {
 	return out.Bytes(), nil
 }
 
+// IsChanged returns returns `true` if this file is changed.
+func (gf *GitFile) IsChanged() bool {
+	return gf.status == "changed"
+}
+
 // IsStaged returns returns `true` if this file is staged.
 func (gf *GitFile) IsStaged() bool {
 	return gf.status == "staged"
@@ -138,9 +142,12 @@ func (gf *GitFile) Name() string {
 	return gf.name
 }
 
+// Refresh refreshes the status of this file.
 func (gf *GitFile) Refresh() error {
+	git := gf.git
+
 	if gf.IsStaged() {
-		cmd := exec.Command("git", "diff", "--cached", "--name-status", gf.name)
+		cmd := git.CreateExecCommand("git", "diff", "--cached", "--name-status", gf.name)
 
 		var out bytes.Buffer
 		cmd.Stdout = &out
@@ -166,10 +173,17 @@ func (gf *GitFile) Refresh() error {
 	return nil
 }
 
+// StageStatus returns the status if staged.
 func (gf *GitFile) Stage() error {
-	cmd := exec.Command("git", "add", gf.name)
-	_, err := cmd.CombinedOutput()
+	if !gf.IsChanged() {
+		return fmt.Errorf("cannot stage because of status '%s'", gf.status)
+	}
 
+	git := gf.git
+
+	cmd := git.CreateExecCommand("git", "add", gf.name)
+
+	err := cmd.Run()
 	if err != nil {
 		return err
 	}

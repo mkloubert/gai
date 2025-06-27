@@ -40,6 +40,14 @@ type GitClient struct {
 	dir string
 }
 
+// CreateExecCommand creates a new pre-setuped command.
+func (g *GitClient) CreateExecCommand(f string, args ...string) *exec.Cmd {
+	cmd := exec.Command(f, args...)
+	cmd.Dir = g.dir
+
+	return cmd
+}
+
 // Dir returns the root directory of the underlying repository.
 func (g *GitClient) Dir() string {
 	return g.dir
@@ -49,8 +57,7 @@ func (g *GitClient) Dir() string {
 func (g *GitClient) GetAllCommits() ([]*GitCommit, error) {
 	commits := make([]*GitCommit, 0)
 
-	cmd := exec.Command("git", "log", "--pretty=format:%H")
-	cmd.Dir = g.dir
+	cmd := g.CreateExecCommand("git", "log", "--pretty=format:%H")
 
 	output, err := cmd.Output()
 	if err != nil {
@@ -77,10 +84,7 @@ func (g *GitClient) GetAllCommits() ([]*GitCommit, error) {
 func (g *GitClient) GetChangedFiles() ([]*GitFile, error) {
 	changedFiles := make([]*GitFile, 0)
 
-	repoDir := g.dir
-
-	cmd := exec.Command("git", "status", "--porcelain")
-	cmd.Dir = repoDir
+	cmd := g.CreateExecCommand("git", "status", "--porcelain")
 
 	var out bytes.Buffer
 	cmd.Stdout = &out
@@ -196,8 +200,7 @@ func (g *GitClient) GetLatestCommit() (*GitCommit, error) {
 		git: g,
 	}
 
-	headCmd := exec.Command("git", "rev-parse", "HEAD")
-	headCmd.Dir = g.dir
+	headCmd := g.CreateExecCommand("git", "rev-parse", "HEAD")
 
 	headOut, err := headCmd.Output()
 	if err != nil {
@@ -213,8 +216,7 @@ func (g *GitClient) GetLatestCommit() (*GitCommit, error) {
 func (g *GitClient) GetStagedFiles() ([]*GitFile, error) {
 	gitFiles := make([]*GitFile, 0)
 
-	cmd := exec.Command("git", "diff", "--cached", "--name-status")
-	cmd.Dir = g.dir
+	cmd := g.CreateExecCommand("git", "diff", "--cached", "--name-status")
 
 	output, err := cmd.Output()
 	if err != nil {

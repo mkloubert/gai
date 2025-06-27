@@ -63,25 +63,35 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 		Run: func(cmd *cobra.Command, args []string) {
 			startTime := app.GetISOTime()
 
+			app.Dbgf("Start time: %s%s", startTime, app.EOL)
+
 			git, err := app.NewGitClient()
 			app.CheckIfError(err)
+
+			app.Dbg("Created new git client")
 
 			allStagedFiles, err := git.GetStagedFiles()
 			app.CheckIfError(err)
 
+			app.Dbgf("Found %d staged files%s", len(allStagedFiles), app.EOL)
+
 			if len(allStagedFiles) == 0 {
 				// no staged files found, ask user for changed files to stage
+
+				app.Dbg("Asking user for changed files to tage ...")
 
 				changedFiles, err := git.GetChangedFiles()
 				app.CheckIfError(err)
 
-				// sort by name
-				sort.Slice(changedFiles, func(i, j int) bool {
-					return strings.ToLower(changedFiles[i].Name()) < strings.ToLower(changedFiles[j].Name())
-				})
+				app.Dbgf("Found %d changed files%s", len(changedFiles), app.EOL)
 
 				if len(changedFiles) > 0 {
 					// ask
+
+					// but sort by name first
+					sort.Slice(changedFiles, func(i, j int) bool {
+						return strings.ToLower(changedFiles[i].Name()) < strings.ToLower(changedFiles[j].Name())
+					})
 
 					model := &stageChangedFilesModel{
 						items:  []stageChangedFilesModelItem{},
@@ -105,12 +115,16 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 						_, err := p.Run()
 						app.CheckIfError(err)
+					} else {
+						app.Dbg("Auto adding changed files ...")
 					}
 
 					for _, item := range model.items {
 						if !item.checked {
 							continue
 						}
+
+						app.Dbgf("Staging changed file '%s' ...%s", item.file.Name(), app.EOL)
 
 						err := item.file.Stage()
 						app.CheckIfError(err)
@@ -128,6 +142,8 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 
 			model := app.AI.ChatModel()
 
+			app.Dbgf("Initializes AI with model %s changed files%s", model, app.EOL)
+
 			startEmpty := true
 
 			contextOptions := make([]types.NewChatContextOptions, 0)
@@ -138,11 +154,17 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 			chat, err := app.NewChatContext(contextOptions...)
 			app.CheckIfError(err)
 
+			app.Dbg("Created chat context")
+
 			latestCommit, err := git.GetLatestCommit()
 			app.CheckIfError(err)
 
+			app.Dbgf("Latest git commit: %s%s", latestCommit.Hash(), app.EOL)
+
 			allLatestCommitedFiles, err := latestCommit.GetFiles()
 			app.CheckIfError(err)
+
+			app.Dbgf("Number of files in this commit: %d%s", len(allLatestCommitedFiles), app.EOL)
 
 			checkFile := app.NewFilePredicate()
 
@@ -156,6 +178,8 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 					finalStagedFilesToTake = append(finalStagedFilesToTake, sf)
 				}
 			}
+
+			app.Dbgf("Number of final staged files to take: %d%s", len(finalStagedFilesToTake), app.EOL)
 
 			// then we collect the latest commit files for the context ...
 			finalLastCommitedFilesToTake := make([]*types.GitFile, 0)
@@ -184,11 +208,14 @@ func Init_commit_Command(app *types.AppContext, parentCmd *cobra.Command) {
 				}
 			}
 
+			app.Dbgf("Number of final files from latest commit to take: %d%s", len(finalLastCommitedFilesToTake), app.EOL)
+
 			approximateSubmittedBinarySize := uint64(0)
 			approximateSubmittedTextSize := uint64(0)
 			approximateSubmittedText := ""
 
 			// append files from latest commit
+			app.Dbg("Appending files from latest commit ...")
 			chat.AppendSimplePseudoUserConversation(`I will start by submitting each file from the latest git commit with its contents as serialized JSON strings.
 Answer with 'OK' if you understand this.`,
 				types.AppendSimplePseudoUserConversationOptions{
@@ -213,8 +240,12 @@ Answer with 'OK' if you understand this.`,
 				}
 
 				if utils.MaybeBinary(latestContent) {
+					app.Dbgf("'%s' from latest commit seems to be binary%s", lcf.Name(), app.EOL)
+
 					approximateSubmittedBinarySize += uint64(len(latestContent))
 				} else {
+					app.Dbgf("'%s' from latest commit seems to be text%s", lcf.Name(), app.EOL)
+
 					textContent, err := utils.EnsurePlainText(latestContent)
 					app.CheckIfError(err)
 
@@ -241,6 +272,7 @@ Answer with 'OK' if you analyzed it%v.`,
 				}
 			}
 
+			app.Dbg("Appending staged files ...")
 			chat.AppendSimplePseudoUserConversation(`Now I continue with the list of staged files.
 Each file contains the diff (or the complete content) between the staged content and the latest commit based on the current state status.
 Answer with 'OK' if you understand this.`,
@@ -251,6 +283,8 @@ Answer with 'OK' if you understand this.`,
 			for i, sf := range finalStagedFilesToTake {
 				if app.DryRun {
 					app.Writeln(fmt.Sprintf("Staged file: %s", sf.Name()))
+				} else {
+					app.Dbgf("Staged file: '%s'%s", sf.Name(), app.EOL)
 				}
 
 				currentContent, err := sf.GetCurrentContent()
@@ -266,11 +300,16 @@ Answer with 'OK' if you understand this.`,
 				}
 
 				stageStatus := sf.StageStatus()
+
+				app.Dbgf("'%s' from staged files has status '%s' %s", sf.Name(), stageStatus, app.EOL)
+
 				if stageStatus == "A" {
 					// added
 
 					var um string
 					if utils.MaybeBinary(currentContent) {
+						app.Dbgf("'%s' from staged files seems to be binary%s", sf.Name(), app.EOL)
+
 						um = fmt.Sprintf(
 							`This is the new binary file with the path '%s'. In this case no content is submitted.
 Try to take the context from the path.
@@ -281,6 +320,8 @@ Answer with 'OK' if you analyzed it%v.`,
 
 						approximateSubmittedBinarySize += uint64(len(currentContent))
 					} else {
+						app.Dbgf("'%s' from staged files seems to be text%s", sf.Name(), app.EOL)
+
 						str, err := utils.EnsurePlainText(currentContent)
 						app.CheckIfError(err)
 
@@ -311,6 +352,7 @@ Answer with 'OK' if you analyzed it%v.`,
 					var um string
 					if utils.MaybeBinary(currentContent) {
 						// binary file
+						app.Dbgf("'%s' from staged files seems to be binary%s", sf.Name(), app.EOL)
 
 						um = fmt.Sprintf(
 							`This is the updated binary file with the path '%s'. In this case no content is submitted.
@@ -322,6 +364,10 @@ Answer with 'OK' if you analyzed it%v.`,
 
 						approximateSubmittedBinarySize += uint64(len(currentContent))
 					} else {
+						app.Dbgf("'%s' from staged files seems to be text%s", sf.Name(), app.EOL)
+
+						app.Dbgf("Making diff from staged file '%s' ...%s", sf.Name(), app.EOL)
+
 						diff, err := latestCommit.Diff(sf)
 						app.CheckIfError(err)
 
@@ -384,6 +430,8 @@ Answer with 'OK' if you analyzed it%v.`,
 			responseSchema, responseSchemaName, err := app.GetResponseSchema()
 			app.CheckIfError(err)
 
+			app.Dbg("Got response schema")
+
 			systemPrompt := fmt.Sprintf(`You are an expert assistant for writing git commit messages. Your primary goal is to generate clear, concise, and correct commit messages strictly following the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) specification.
 
 When a user describes a code change, you will:
@@ -401,10 +449,14 @@ Below is the full Conventional Commits specification for your reference. Always 
 %s`, "`!`", "`BREAKING CHANGE:`",
 				conventionalCommitsSpec)
 
+			app.Dbg("Setup system prompt")
+
 			doNotSaveConversation := true
 
 			additionalContext, err := app.GetInput(args)
 			app.CheckIfError(err)
+
+			app.Dbg("Got additional context")
 
 			message := "Write a commit message based on the Conventional Commits specification."
 			if strings.TrimSpace(additionalContext) != "" {
@@ -417,6 +469,8 @@ Below is the full Conventional Commits specification for your reference. Always 
 				)
 			}
 			message += "\nYour JSON:"
+
+			app.Dbg("Setup message")
 
 			if responseSchema == nil {
 				responseSchema = &map[string]any{
@@ -446,9 +500,13 @@ Below is the full Conventional Commits specification for your reference. Always 
 						},
 					},
 				}
+			} else {
+				app.Dbg("Taking custom response schema")
 			}
 			if strings.TrimSpace(responseSchemaName) == "" {
 				responseSchemaName = "CreateGitCommitMessageSchema"
+			} else {
+				app.Dbgf("Custom response schema name: %s%s", responseSchemaName, app.EOL)
 			}
 
 			if app.DryRun {
@@ -508,6 +566,11 @@ Below is the full Conventional Commits specification for your reference. Always 
 			app.Writeln()
 
 			doCommit := app.AlwaysYes
+
+			if doCommit {
+				app.Dbg("Will do an auto commit ...")
+			}
+
 			if !doCommit {
 				reader := bufio.NewReader(app.Stdin)
 				for {
@@ -535,6 +598,8 @@ Below is the full Conventional Commits specification for your reference. Always 
 			}
 
 			app.Writeln()
+
+			app.Dbg("Running 'git commit' ...")
 
 			c := exec.Command("git", "commit", "-m", finalCommitMessage)
 			c.Dir = git.Dir()

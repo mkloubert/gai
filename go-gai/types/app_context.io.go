@@ -27,6 +27,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -151,7 +152,7 @@ func (app *AppContext) GetInput(args []string) (string, error) {
 		defer os.Remove(tmpFilePath)
 
 		// run the editor command
-		cmd := app.CreateExecCommand(editorPath, editorArgs...)
+		cmd := exec.Command(editorPath, editorArgs...)
 		cmd.Dir = path.Dir(tmpFilePath)
 
 		err = cmd.Run()

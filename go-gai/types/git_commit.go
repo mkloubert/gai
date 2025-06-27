@@ -23,7 +23,6 @@
 package types
 
 import (
-	"os/exec"
 	"strings"
 )
 
@@ -42,8 +41,7 @@ func (gc *GitCommit) Diff(f *GitFile) (string, error) {
 func (gc *GitCommit) GetFiles() ([]*GitFile, error) {
 	git := gc.git
 
-	cmd := exec.Command("git", "ls-tree", "--name-only", "-r", gc.hash)
-	cmd.Dir = git.dir
+	cmd := git.CreateExecCommand("git", "ls-tree", "--name-only", "-r", gc.hash)
 
 	output, err := cmd.Output()
 	if err != nil {
