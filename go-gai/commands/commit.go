@@ -606,6 +606,7 @@ Below is the full Conventional Commits specification for your reference. Always 
 							break
 						}
 
+						app.Writeln()
 						app.WriteString("Please answer with 'y' (yes), 'r' (retry) or n ('no').")
 					}
 				}

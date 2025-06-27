@@ -1,7 +1,12 @@
 defaults:
   flags:
     file:
+      - ".env"
       - "go.mod"
+      - "README.md"
     files:
       - "*.go"
-      - "*.md"
+      - "!/sandbox*.*"
+      - "!/sandbox/**/*"
+      - "!/TODOs.md"
+      - "!.env*.local"
