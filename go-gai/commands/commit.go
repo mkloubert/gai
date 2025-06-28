@@ -289,11 +289,17 @@ Answer with 'OK' if you understand this.`,
 					app.Dbgf("Staged file: '%s'%s", sf.Name(), app.EOL)
 				}
 
-				currentContent, err := sf.GetCurrentContent()
-				app.CheckIfError(err)
+				stageStatus := sf.StageStatus()
 
-				if app.DryRun {
-					app.Writeln(fmt.Sprintf("\tSize: %d", len(currentContent)))
+				ensureCurrentContent := func() []byte {
+					c, err := sf.GetCurrentContent()
+					app.CheckIfError(err)
+
+					if app.DryRun {
+						app.Writeln(fmt.Sprintf("\tSize: %d", len(c)))
+					}
+
+					return c
 				}
 
 				messageSuffix := ""
@@ -301,12 +307,12 @@ Answer with 'OK' if you understand this.`,
 					messageSuffix = " and integrate it with the context of the other staged files"
 				}
 
-				stageStatus := sf.StageStatus()
-
 				app.Dbgf("'%s' from staged files has status '%s' %s", sf.Name(), stageStatus, app.EOL)
 
 				if stageStatus == "A" {
 					// added
+
+					currentContent := ensureCurrentContent()
 
 					var um string
 					if utils.MaybeBinary(currentContent) {
@@ -350,6 +356,8 @@ Answer with 'OK' if you analyzed it%v.`,
 					)
 				} else if stageStatus == "M" {
 					// modified
+
+					currentContent := ensureCurrentContent()
 
 					var um string
 					if utils.MaybeBinary(currentContent) {
