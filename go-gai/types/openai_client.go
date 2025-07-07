@@ -42,6 +42,16 @@ type OpenAIClient struct {
 	chatModel string
 }
 
+type openaiGetModelListResponse struct {
+	Data []openaiGetModelListItem `json:"data"`
+}
+
+type openaiGetModelListItem struct {
+	Id      string `json:"id"`
+	Object  string `json:"object"`
+	OwnedBy string `json:"owned_by"`
+}
+
 func (c *OpenAIClient) appendConversationItemTo(messages []OpenAIChatMessage, item *ConversationRepositoryConversationItem) ([]OpenAIChatMessage, error) {
 	if item.Contents != nil {
 		newMessage := &OpenAIChatMessage{
@@ -405,6 +415,72 @@ func (c *OpenAIClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 // ChatModel returns the current chat model.
 func (c *OpenAIClient) ChatModel() string {
 	return c.chatModel
+}
+
+// Returns the list of supported OpenAI models.
+func (c *OpenAIClient) GetModels() ([]AIModel, error) {
+	models := make([]AIModel, 0)
+
+	apiKey := strings.TrimSpace(c.apiKey)
+	if apiKey == "" {
+		return models, fmt.Errorf("no OpenAI api key defined")
+	}
+
+	app := c.app
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "https://api.openai.com" // use default
+	}
+
+	url := fmt.Sprintf("%s/v1/models", baseUrl)
+
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		return models, err
+	}
+
+	// setup
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", apiKey))
+
+	// ... and finally send the JSON data
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return models, err
+	}
+	defer resp.Body.Close()
+
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return models, err
+	}
+
+	// load the response
+	responseData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return models, err
+	}
+
+	var listResponse openaiGetModelListResponse
+	err = json.Unmarshal(responseData, &listResponse)
+	if err != nil {
+		return models, err
+	}
+
+	for _, item := range listResponse.Data {
+		if item.OwnedBy != "openai" && item.OwnedBy != "system" {
+			continue
+		}
+
+		models = append(models, AIModel{
+			client:    c,
+			modelType: "",
+			name:      item.Id,
+		})
+	}
+
+	return models, nil
 }
 
 // Prompt does a single AI prompt with a specific `msg`.

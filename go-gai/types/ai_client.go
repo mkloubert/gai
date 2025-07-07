@@ -22,7 +22,9 @@
 
 package types
 
-import "io"
+import (
+	"io"
+)
 
 // AIClient describes a client for an AI provider.
 type AIClient interface {
@@ -36,6 +38,8 @@ type AIClient interface {
 	Chat(ctx *ChatContext, msg string, opts ...AIClientChatOptions) (string, ConversationRepositoryConversation, error)
 	// ChatModel returns the current chat model.
 	ChatModel() string
+	// Returns the list of supported AI models.
+	GetModels() ([]AIModel, error)
 	// Prompt does a single AI prompt with a specific `msg`.
 	Prompt(msg string, opts ...AIClientPromptOptions) (AIClientPromptResponse, error)
 	// Provider returns the name of the provider.

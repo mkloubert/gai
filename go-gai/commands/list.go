@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/joho/godotenv"
 	"github.com/mkloubert/gai/types"
@@ -157,6 +158,62 @@ func init_list_files_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	)
 }
 
+func init_list_models_Command(app *types.AppContext, parentCmd *cobra.Command) {
+	var listFilesCmd = &cobra.Command{
+		Use:   "models",
+		Short: "List models",
+		Long:  `Lists AI models for each supported provider.`,
+		Run: func(cmd *cobra.Command, args []string) {
+			clients := make([]types.AIClient, 0)
+
+			ollama, ollamaErr := app.NewAIClient("ollama")
+			if ollamaErr != nil {
+				app.Dbgf("WARN: could not create Ollama client: %s%s", ollamaErr.Error(), app.EOL)
+			} else {
+				clients = append(clients, ollama)
+			}
+
+			openai, openaiErr := app.NewAIClient("openai")
+			if openaiErr != nil {
+				app.Dbgf("WARN: could not create OpenAI client: %s%s", openaiErr.Error(), app.EOL)
+			} else {
+				clients = append(clients, openai)
+			}
+
+			modelList := make([]types.AIModel, 0)
+
+			for _, c := range clients {
+				loadedModels, err := c.GetModels()
+				if err != nil {
+					app.Dbgf("WARN: Could not load models: %s", err.Error())
+					continue
+				}
+
+				modelList = append(modelList, loadedModels...)
+			}
+
+			sort.Slice(modelList, func(x, y int) bool {
+				strX := modelList[x].String()
+				strY := modelList[x].String()
+
+				return strings.TrimSpace(
+					strings.ToLower(strX),
+				) < strings.TrimSpace(
+					strings.ToLower(strY),
+				)
+			})
+
+			for _, m := range modelList {
+				app.Writeln(m.String())
+			}
+		},
+	}
+
+	parentCmd.AddCommand(
+		listFilesCmd,
+	)
+}
+
 // Init_list_Command initializes the `list` command.
 func Init_list_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	var listCmd = &cobra.Command{
@@ -172,6 +229,7 @@ func Init_list_Command(app *types.AppContext, parentCmd *cobra.Command) {
 	init_list_conversation_Command(app, listCmd)
 	init_list_env_Command(app, listCmd)
 	init_list_files_Command(app, listCmd)
+	init_list_models_Command(app, listCmd)
 
 	parentCmd.AddCommand(
 		listCmd,

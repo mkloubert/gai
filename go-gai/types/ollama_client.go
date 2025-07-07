@@ -40,6 +40,14 @@ type OllamaClient struct {
 	chatModel string
 }
 
+type ollamaGetModelListResponse struct {
+	Models []ollamaGetModelListItem `json:"models"`
+}
+
+type ollamaGetModelListItem struct {
+	Name string `json:"name"`
+}
+
 func (c *OllamaClient) appendConversationItemTo(messages []OllamaAIChatMessage, item *ConversationRepositoryConversationItem) ([]OllamaAIChatMessage, error) {
 	if item.Contents != nil {
 		newMessage := &OllamaAIChatMessage{
@@ -306,6 +314,60 @@ func (c *OllamaClient) Chat(ctx *ChatContext, msg string, opts ...AIClientChatOp
 // ChatModel returns the current chat model.
 func (c *OllamaClient) ChatModel() string {
 	return c.chatModel
+}
+
+// Returns the list of supported Ollama models.
+func (c *OllamaClient) GetModels() ([]AIModel, error) {
+	app := c.app
+
+	models := make([]AIModel, 0)
+
+	baseUrl := app.GetBaseUrl()
+	if baseUrl == "" {
+		baseUrl = "http://localhost:11434" // use default
+	}
+
+	url := fmt.Sprintf("%s/api/tags", baseUrl)
+
+	req, err := http.NewRequest("GET", url, bytes.NewBuffer([]byte{}))
+	if err != nil {
+		return models, err
+	}
+
+	// ... and finally send the JSON data
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return models, err
+	}
+	defer resp.Body.Close()
+
+	err = utils.CheckForHttpResponseError(resp)
+	if err != nil {
+		return models, err
+	}
+
+	// load the response
+	responseData, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return models, err
+	}
+
+	var listResponse ollamaGetModelListResponse
+	err = json.Unmarshal(responseData, &listResponse)
+	if err != nil {
+		return models, err
+	}
+
+	for _, m := range listResponse.Models {
+		models = append(models, AIModel{
+			client:    c,
+			modelType: "",
+			name:      m.Name,
+		})
+	}
+
+	return models, nil
 }
 
 // Prompt does a single AI prompt with a specific `msg`.
