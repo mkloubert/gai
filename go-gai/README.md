@@ -91,7 +91,20 @@ gai chat "What is the weather today?"
 **Description:**
 Starts or continues a chat session with the AI. Supports sending files as context and resetting the conversation.
 
-### 3. `describe` (alias: `d`)
+### 3. `commit`
+
+Commit staged files with AI assistance.
+
+**Usage:**
+
+```
+gai commit [options] [additional context]
+```
+
+**Description:**
+This command analyzes the staged files in the git repository, optionally allows staging changed files, and generates a commit message following the Conventional Commits specification using AI. It supports retrying the commit message generation and confirms before committing.
+
+### 4. `describe` (alias: `d`)
 
 Describe resources such as images.
 
@@ -117,7 +130,7 @@ Describe resources such as images.
   - `--min-tags`: Minimum number of tags to generate (default 1).
   - `--update-existing`: Update existing database entries if present.
 
-### 4. `init` (alias: `i`)
+### 5. `init` (alias: `i`)
 
 Initialize resources such as source code projects.
 
@@ -136,7 +149,7 @@ Initialize resources such as source code projects.
   **Description:**
   This command creates a new project directory, generates multiple files and subfolders as needed, and provides a detailed README to get started quickly.
 
-### 5. `list` (alias: `l`)
+### 6. `list` (alias: `l`)
 
 List various resources related to the app.
 
@@ -152,6 +165,9 @@ List various resources related to the app.
   gai list conversation
   ```
 
+  **Description:**
+  Displays the current conversation history in the active context, showing roles and content with syntax highlighting.
+
 - **`env` (alias: `e`)**
 
   List all environment variables used by the app.
@@ -165,6 +181,9 @@ List various resources related to the app.
   **Flags:**
 
   - `--no-sort`: Do not sort the environment variables.
+
+  **Description:**
+  Lists all environment variables loaded by the application, optionally sorted.
 
 - **`files`**
 
@@ -181,7 +200,23 @@ List various resources related to the app.
   - `--full`: Show full file paths.
   - `--with-types`: Show mime types of files.
 
-### 6. `prompt` (alias: `p`)
+  **Description:**
+  Lists files matching the specified patterns or files, with options to show full paths and mime types.
+
+- **`models`**
+
+  List AI models for each supported provider.
+
+  **Usage:**
+
+  ```
+  gai list models
+  ```
+
+  **Description:**
+  Displays available AI models from configured providers such as OpenAI and Ollama.
+
+### 7. `prompt` (alias: `p`)
 
 Send a prompt to the AI.
 
@@ -194,7 +229,7 @@ gai prompt "Write a poem about the sea."
 **Description:**
 Sends a single prompt to the AI and returns the response. Supports sending files as context.
 
-### 7. `reset` (alias: `r`)
+### 8. `reset` (alias: `r`)
 
 Reset resources.
 
@@ -210,24 +245,21 @@ Reset resources.
   gai reset conversation
   ```
 
-### 8. `update` (alias: `u`)
-
-Update resources such as source code files.
-
-#### Sub-commands:
-
-- **`code` (alias: `c`)**
-
-  Update source code files as specified by `--file` or `--files` flags.
-
-  **Usage:**
-
-  ```
-  gai update code --file main.go "Refactor this code to improve readability."
-  ```
-
   **Description:**
-  Sends the content of the specified files and a task description to the AI, which returns updated file contents along with explanations. The tool then writes the updates back to the files.
+  Clears the current conversation history for the active context.
+
+### 9. `update`
+
+Update source code files as specified by `--file` or `--files` flags.
+
+**Usage:**
+
+```
+gai update code --file main.go "Refactor this code to improve readability."
+```
+
+**Description:**
+Sends the content of the specified files and a task description to the AI, which returns updated file contents along with explanations. The tool then writes the updates back to the files.
 
 ## Environment Variables
 
