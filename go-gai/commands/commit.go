@@ -450,6 +450,7 @@ When a user describes a code change, you will:
 - If a breaking change is described, use the %s syntax or the %s footer as specified.
 - When appropriate, include a commit body or footer, for example for breaking changes or references to issues.
 - Format all output as plain text or Markdown, as appropriate.
+- You can always assume that there is no issue behind this commit.
 
 If you are unsure about the type, clearly state your assumptions or ask the user for clarification.
 
