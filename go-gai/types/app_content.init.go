@@ -47,8 +47,19 @@ func (app *AppContext) initHomeDir() {
 // InitAI initializes the default AI client.
 func (app *AppContext) InitAI() {
 	if strings.TrimSpace(app.Model) == "" {
-		// now try env variable
-		app.Model = strings.TrimSpace(app.GetEnv("GAI_DEFAULT_CHAT_MODEL"))
+		// first try command specific default model
+		// GAI_DEFAULT_COMMAND_MODEL__*
+		envSuffix := strings.Join(app.CommandPath, "_")
+		envSuffix = strings.ToUpper(envSuffix)
+		envName := fmt.Sprintf("GAI_DEFAULT_COMMAND_MODEL__%s", envSuffix)
+
+		app.Model = strings.TrimSpace(
+			app.GetEnv(envName),
+		)
+		if app.Model == "" {
+			// now try env variable for common default
+			app.Model = strings.TrimSpace(app.GetEnv("GAI_DEFAULT_CHAT_MODEL"))
+		}
 	}
 
 	modelWithProvider := strings.TrimSpace(app.Model)

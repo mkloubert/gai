@@ -263,29 +263,30 @@ Sends the content of the specified files and a task description to the AI, which
 
 ## Environment Variables
 
-| Environment Variable     | CLI Flag(s)            | Description                                    | Example                            |
-| ------------------------ | ---------------------- | ---------------------------------------------- | ---------------------------------- |
-| `GAI_BASE_URL`           | `--base-url`, `-u`     | Custom base URL for AI API                     | `--base-url=https://api.custom`    |
-| `GAI_CONTEXT`            | `--context`, `-c`      | Name of the current AI context                 | `--context=projectX`               |
-| `GAI_DEFAULT_CHAT_MODEL` | `--model`, `-m`        | Default AI chat model (format: provider:model) | `--model=openai:gpt-4.1`           |
-| `GAI_DATABASE`           | `--database`           | URI or path to database (usually SQLite)       | `--database=./images.db`           |
-| `GAI_EDITOR`             | `--editor`             | Custom editor command                          | `--editor=vim`                     |
-| `GAI_ENV_FILE`           | `--env-file`, `-e`     | Additional env files to load                   | `--env-file=.env.local`            |
-| `GAI_FILE`               | `--file`, `-f`         | One or more files to use                       | `--file=main.go`                   |
-| `GAI_FILES`              | `--files`              | One or more file patterns to use               | `--files=*.go`                     |
-| `GAI_INPUT_ORDER`        |                        | Order of input sources: args, stdin, editor    | `args,stdin,editor`                |
-| `GAI_INPUT_SEPARATOR`    |                        | Separator used when concatenating inputs       | `" "`                              |
-| `GAI_MAX_TOKENS`         | `--max-tokens`         | Maximum number of tokens to use                | `--max-tokens=1000`                |
-| `GAI_OUTPUT_FILE`        | `--output`, `-o`       | File to write output to                        | `--output=result.txt`              |
-| `GAI_SCHEMA_FILE`        | `--schema`             | File with response format/schema               | `--schema=response.json`           |
-| `GAI_SCHEMA_NAME`        | `--schema-name`        | Name of the response format/schema             | `--schema-name=MySchema`           |
-| `GAI_SKIP_ENV_FILES`     | `--skip-env-files`     | Skip loading default `.env` files              | `--skip-env-files`                 |
-| `GAI_SYSTEM_PROMPT`      | `--system`, `-s`       | Custom system prompt for AI                    | `--system="You are a helpful AI"`  |
-| `GAI_SYSTEM_ROLE`        | `--system-role`        | Custom name/id of the system role              | `--system-role=system`             |
-| `GAI_TEMP`               | `--temp`               | Custom temp folder                             | `--temp=./my-temp-folder`          |
-| `GAI_TERMINAL_FORMATTER` | `--terminal-formatter` | Custom terminal formatter for output           | `--terminal-formatter=terminal16m` |
-| `GAI_TERMINAL_STYLE`     | `--terminal-style`     | Custom terminal style for output               | `--terminal-style=dracula`         |
-| `OPENAI_API_KEY`         | `--api-key`, `-k`      | API key for OpenAI provider                    | `OPENAI_API_KEY=sk-xxxx`           |
+| Environment Variable           | CLI Flag(s)            | Description                                                                                                       | Example                                                 |
+| ------------------------------ | ---------------------- | ----------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `GAI_BASE_URL`                 | `--base-url`, `-u`     | Custom base URL for AI API                                                                                        | `--base-url=https://api.custom`                         |
+| `GAI_CONTEXT`                  | `--context`, `-c`      | Name of the current AI context                                                                                    | `--context=projectX`                                    |
+| `GAI_DEFAULT_CHAT_MODEL`       | `--model`, `-m`        | Default AI chat model (format: provider:model)                                                                    | `--model=openai:gpt-4.1`                                |
+| `GAI_DATABASE`                 | `--database`           | URI or path to database (usually SQLite)                                                                          | `--database=./images.db`                                |
+| `GAI_DEFAULT_COMMAND_MODEL__*` |                        | Custom command specific AI model while `*` is the name of the command in uppercase and spaces are replaced by `_` | `GAI_DEFAULT_COMMAND_MODEL__COMMIT=openai:gpt-4.1-nano` |
+| `GAI_EDITOR`                   | `--editor`             | Custom editor command                                                                                             | `--editor=vim`                                          |
+| `GAI_ENV_FILE`                 | `--env-file`, `-e`     | Additional env files to load                                                                                      | `--env-file=.env.local`                                 |
+| `GAI_FILE`                     | `--file`, `-f`         | One or more files to use                                                                                          | `--file=main.go`                                        |
+| `GAI_FILES`                    | `--files`              | One or more file patterns to use                                                                                  | `--files=*.go`                                          |
+| `GAI_INPUT_ORDER`              |                        | Order of input sources: args, stdin, editor                                                                       | `args,stdin,editor`                                     |
+| `GAI_INPUT_SEPARATOR`          |                        | Separator used when concatenating inputs                                                                          | `" "`                                                   |
+| `GAI_MAX_TOKENS`               | `--max-tokens`         | Maximum number of tokens to use                                                                                   | `--max-tokens=1000`                                     |
+| `GAI_OUTPUT_FILE`              | `--output`, `-o`       | File to write output to                                                                                           | `--output=result.txt`                                   |
+| `GAI_SCHEMA_FILE`              | `--schema`             | File with response format/schema                                                                                  | `--schema=response.json`                                |
+| `GAI_SCHEMA_NAME`              | `--schema-name`        | Name of the response format/schema                                                                                | `--schema-name=MySchema`                                |
+| `GAI_SKIP_ENV_FILES`           | `--skip-env-files`     | Skip loading default `.env` files                                                                                 | `--skip-env-files`                                      |
+| `GAI_SYSTEM_PROMPT`            | `--system`, `-s`       | Custom system prompt for AI                                                                                       | `--system="You are a helpful AI"`                       |
+| `GAI_SYSTEM_ROLE`              | `--system-role`        | Custom name/id of the system role                                                                                 | `--system-role=system`                                  |
+| `GAI_TEMP`                     | `--temp`               | Custom temp folder                                                                                                | `--temp=./my-temp-folder`                               |
+| `GAI_TERMINAL_FORMATTER`       | `--terminal-formatter` | Custom terminal formatter for output                                                                              | `--terminal-formatter=terminal16m`                      |
+| `GAI_TERMINAL_STYLE`           | `--terminal-style`     | Custom terminal style for output                                                                                  | `--terminal-style=dracula`                              |
+| `OPENAI_API_KEY`               | `--api-key`, `-k`      | API key for OpenAI provider                                                                                       | `OPENAI_API_KEY=sk-xxxx`                                |
 
 ## Database Support and Usage
 

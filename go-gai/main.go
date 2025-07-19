@@ -26,6 +26,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/mkloubert/gai/commands"
 	"github.com/mkloubert/gai/types"
@@ -45,6 +46,9 @@ func main() {
 		Short: "gAI is a command line tool for AI tasks",
 		Long:  "A command line to for AI tasks which can be found at https://github.com/mkloubert/gai",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			commandPathParts := strings.Split(cmd.CommandPath(), " ")
+			app.CommandPath = commandPathParts[1:]
+
 			app.Init()
 
 			app.Dbg(fmt.Sprintf("Executing command '%v' ...", cmd.Name()))

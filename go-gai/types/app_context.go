@@ -48,6 +48,8 @@ type AppContext struct {
 	ApiKey string
 	// BaseUrl stores base URL.
 	BaseUrl string
+	// CommandPath stores full path of current command.
+	CommandPath []string
 	// Context stores the name of the current context.
 	Context string
 	// Database stores the path or URI to the database, usually a SQLite database.
